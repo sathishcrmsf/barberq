@@ -1,12 +1,13 @@
 // @cursor: This schema defines the WalkIn model for the MVP.
 // Keep it simple - only what's needed per BRD.
+// Updated to use PostgreSQL for Vercel deployment.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

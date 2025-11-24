@@ -6,9 +6,22 @@ All code has been tested and committed to Git. You can now deploy to Vercel.
 
 ---
 
+## ⚠️ IMPORTANT: Database Setup Required First
+
+**SQLite does NOT work on Vercel!** You must set up a PostgreSQL database before deploying.
+
+👉 **Follow the [DATABASE_SETUP.md](./DATABASE_SETUP.md) guide first**, then return here.
+
+---
+
 ## Option 1: Deploy via Vercel Website (Recommended)
 
 This is the easiest method and requires no CLI installation.
+
+### Prerequisites:
+
+✅ PostgreSQL database created (Neon/Vercel Postgres/Supabase)
+✅ `DATABASE_URL` connection string ready
 
 ### Steps:
 
@@ -27,18 +40,28 @@ This is the easiest method and requires no CLI installation.
 4. **Configure Project:**
    - **Framework Preset**: Next.js (auto-detected)
    - **Root Directory**: `./` (default)
-   - **Build Command**: `npm run build` (uses the updated script with Prisma)
+   - **Build Command**: Uses vercel.json config (includes Prisma migrations)
    - **Output Directory**: `.next` (default)
 
-5. **Environment Variables** (Optional for MVP):
+5. **Environment Variables** (REQUIRED):
+   
+   Add this environment variable:
    ```
-   DATABASE_URL=file:./prisma/dev.db
+   DATABASE_URL=your_postgresql_connection_string
    ```
-   *Note: The MVP uses SQLite which works on Vercel's filesystem. For production at scale, consider PostgreSQL.*
+   
+   Example (Neon):
+   ```
+   DATABASE_URL=postgresql://user:password@ep-xxx.region.aws.neon.tech/barberq?sslmode=require
+   ```
+   
+   **Important:** Select all environments (Production, Preview, Development)
 
 6. **Click "Deploy"**
 
 7. **Wait 2-3 minutes** for the build to complete
+   - Prisma will automatically run migrations
+   - Database tables will be created
 
 8. **Your app is live!** 🚀
    - Vercel will provide a URL like: `https://barberq-mvp-xxxxx.vercel.app`
@@ -117,47 +140,68 @@ Access these from your Vercel dashboard.
 
 ## Database Considerations
 
-### Current Setup (MVP)
-- Using **SQLite** with file-based storage
-- Works on Vercel's filesystem
-- Perfect for MVP and testing
-- Data persists between deployments
+### Current Setup (Production-Ready)
+- Using **PostgreSQL** for production deployment
+- Serverless database (Neon/Vercel Postgres/Supabase)
+- Perfect for MVP and scales to production
+- Data persists reliably
+- Automatic migrations on deployment
 
-### For Production Scale
-Consider migrating to a hosted database:
+### Why PostgreSQL?
+SQLite doesn't work on Vercel because:
+- Vercel uses serverless functions (stateless)
+- File system is read-only in production
+- Database writes would fail
+
+### Database Options:
 
 **Recommended Options:**
-1. **Vercel Postgres** - Seamless integration
-2. **Supabase** - PostgreSQL with realtime features
-3. **PlanetScale** - MySQL-compatible serverless DB
+1. **Neon** - Free tier, serverless PostgreSQL, auto-scaling
+2. **Vercel Postgres** - Seamless Vercel integration
+3. **Supabase** - PostgreSQL with realtime features + free tier
 4. **Railway** - Simple PostgreSQL hosting
 
-**Migration Steps (when needed):**
-```bash
-# 1. Update prisma/schema.prisma datasource to postgresql
-# 2. Update DATABASE_URL in Vercel env vars
-# 3. Run: npx prisma migrate deploy
-# 4. Redeploy on Vercel
-```
+All options work perfectly with this app - choose based on your preference!
 
 ---
 
 ## Troubleshooting
 
+### "Failure to create queue" Error
+This means SQLite is being used instead of PostgreSQL.
+
+**Solution:**
+1. Ensure `DATABASE_URL` is set in Vercel environment variables
+2. Verify the connection string includes `?sslmode=require` for Neon
+3. Redeploy after setting the environment variable
+
 ### Build Fails
 - Check Vercel build logs for errors
 - Ensure all dependencies are in `package.json`
 - Verify `prisma generate` runs in build script
+- Check if migrations ran: Look for "prisma migrate deploy" in logs
 
-### Database Errors
-- Confirm `DATABASE_URL` is set correctly
-- Check if Prisma client was generated: `npx prisma generate`
-- Review API route logs in Vercel dashboard
+### Database Connection Errors
+**Error: "Can't reach database server"**
+- Confirm `DATABASE_URL` is set correctly in Vercel
+- Verify your database is active (Neon auto-sleeps after inactivity)
+- Check connection string format matches your provider
+- Ensure SSL mode is enabled: `?sslmode=require`
+
+**Error: "Migration failed"**
+- Database might not exist yet
+- Connection string might be incorrect
+- Check Vercel build logs for specific migration errors
 
 ### Page Not Found
 - Verify app router structure in `app/` directory
 - Check for errors in `layout.tsx` and `page.tsx` files
 - Review Vercel deployment logs
+
+### Empty Queue After Deployment
+- Check browser console for API errors
+- Verify API routes are working: Visit `https://your-app.vercel.app/api/walkins`
+- Check Vercel Functions logs for API errors
 
 ---
 

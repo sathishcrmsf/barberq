@@ -1,6 +1,6 @@
 # BarberQ MVP - Walk-In Queue Management
 
-A mobile-first walk-in queue management system for barbershops. Built with Next.js 16, Prisma, and SQLite.
+A mobile-first walk-in queue management system for barbershops. Built with Next.js 16, Prisma, and PostgreSQL.
 
 ## Features
 
@@ -14,7 +14,7 @@ A mobile-first walk-in queue management system for barbershops. Built with Next.
 
 - **Frontend**: Next.js 16 (App Router), React 19, TypeScript
 - **Styling**: Tailwind CSS, shadcn/ui
-- **Database**: SQLite + Prisma ORM
+- **Database**: PostgreSQL + Prisma ORM
 - **Deployment**: Vercel
 
 ## Getting Started
@@ -23,6 +23,16 @@ A mobile-first walk-in queue management system for barbershops. Built with Next.
 
 - Node.js 18+ 
 - npm or yarn
+- PostgreSQL database (for production/Vercel deployment)
+
+### Local Development
+
+For local development, you can optionally use SQLite by setting:
+
+```bash
+# .env.local (for local development only)
+DATABASE_URL="file:./prisma/dev.db"
+```
 
 ### Installation
 
@@ -37,7 +47,7 @@ npm install
 
 ```bash
 npx prisma generate
-npx prisma migrate deploy
+npx prisma migrate dev
 ```
 
 4. Run the development server:
@@ -73,40 +83,29 @@ barberq-mvp/
 
 ## Deployment to Vercel
 
-### Option 1: Deploy via Vercel CLI
+⚠️ **IMPORTANT**: SQLite does NOT work on Vercel. You must set up PostgreSQL first!
 
-1. Install Vercel CLI:
-```bash
-npm i -g vercel
-```
+### Quick Setup (5 minutes)
 
-2. Login to Vercel:
-```bash
-vercel login
-```
+1. **Create free PostgreSQL database:**
+   - Go to [neon.tech](https://neon.tech) (recommended)
+   - Or use Vercel Postgres, Supabase, or Railway
+   - Copy your connection string
 
-3. Deploy:
-```bash
-vercel
-```
+2. **Deploy to Vercel:**
+   - Push code to GitHub
+   - Import to Vercel
+   - Add environment variable:
+     ```
+     DATABASE_URL=postgresql://user:password@host/database?sslmode=require
+     ```
+   - Deploy!
 
-### Option 2: Deploy via GitHub
+📖 **Detailed Instructions**: See [VERCEL_FIX.md](./VERCEL_FIX.md) for step-by-step guide
 
-1. Push code to GitHub
-2. Import project to Vercel
-3. Vercel auto-detects Next.js configuration
-4. Set environment variables (if needed)
-5. Deploy!
+📖 **Full Deployment Guide**: See [DEPLOYMENT.md](./DEPLOYMENT.md)
 
-### Environment Variables
-
-For production deployment, set:
-
-```
-DATABASE_URL="file:./prisma/dev.db"
-```
-
-**Note**: For production use, consider migrating to PostgreSQL or another hosted database solution.
+📖 **Database Setup**: See [DATABASE_SETUP.md](./DATABASE_SETUP.md)
 
 ## Testing
 
