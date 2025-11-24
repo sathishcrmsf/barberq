@@ -1,0 +1,21 @@
+// @cursor: This schema defines the WalkIn model for the MVP.
+// Keep it simple - only what's needed per BRD.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model WalkIn {
+  id           String   @id @default(cuid())
+  customerName String
+  service      String
+  status       String   @default("waiting")
+  notes        String?
+  createdAt    DateTime @default(now())
+}
+
