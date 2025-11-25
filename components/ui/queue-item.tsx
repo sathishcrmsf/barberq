@@ -18,6 +18,15 @@ interface QueueItemProps {
   disableDelete?: boolean;
 }
 
+// Helper function to convert name to Title Case
+function toTitleCase(str: string): string {
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
 export function QueueItem({
   id,
   customerName,
@@ -30,49 +39,50 @@ export function QueueItem({
   disableDelete = false,
 }: QueueItemProps) {
   return (
-    <div className="flex flex-col gap-3 p-4 sm:p-5 border-b border-gray-200 bg-white">
-      <div className="flex items-start justify-between gap-3">
+    <div className="flex flex-col gap-2 py-2 px-4 border-b border-gray-200 bg-white w-full h-auto min-h-[44px]">
+      <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
-            {customerName}
+          <h3 className="text-base font-semibold text-gray-900 truncate">
+            {toTitleCase(customerName)}
           </h3>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">{service}</p>
+          <p className="text-sm text-gray-600">{service}</p>
           {notes && (
-            <p className="text-xs sm:text-sm text-gray-500 mt-1 italic">{notes}</p>
+            <p className="text-xs text-gray-500 mt-0.5 italic">{notes}</p>
           )}
         </div>
-        <StatusBadge status={status} />
+        <div className="flex items-center gap-3">
+          <StatusBadge status={status} />
+          {!disableDelete && (
+            <button
+              onClick={() => onDelete(id)}
+              className="shrink-0 p-1 hover:bg-gray-100 rounded transition-opacity min-w-[44px] min-h-[44px] flex items-center justify-center"
+              aria-label="Delete customer"
+            >
+              <Trash2 className="w-5 h-5 text-gray-500" />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex gap-2">
         {status === "waiting" && (
           <Button
             onClick={() => onStart(id)}
-            className="flex-1 bg-green-600 hover:bg-green-700"
-            size="default"
+            className="w-full h-10 rounded-lg text-base font-semibold bg-green-600 hover:bg-green-700 transition-opacity py-2"
+            aria-label="Start service"
           >
-            <Play className="w-5 h-5" />
-            <span className="sm:inline">Start</span>
+            <Play className="w-4 h-4" />
+            Start
           </Button>
         )}
         {status === "in-progress" && (
           <Button
             onClick={() => onDone(id)}
-            className="flex-1 bg-green-600 hover:bg-green-700"
-            size="default"
+            className="w-full h-10 rounded-lg text-base font-semibold bg-green-600 hover:bg-green-700 transition-opacity py-2"
+            aria-label="Complete service"
           >
-            <Check className="w-5 h-5" />
-            <span className="sm:inline">Done</span>
-          </Button>
-        )}
-        {!disableDelete && (
-          <Button
-            onClick={() => onDelete(id)}
-            variant="outline"
-            size="icon"
-            className="shrink-0"
-          >
-            <Trash2 className="w-5 h-5" />
+            <Check className="w-4 h-4" />
+            Done
           </Button>
         )}
       </div>
