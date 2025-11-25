@@ -24,6 +24,7 @@ export default function QueuePage() {
   const router = useRouter();
   const [walkIns, setWalkIns] = useState<WalkIn[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
 
   const fetchWalkIns = async () => {
     try {
@@ -43,6 +44,11 @@ export default function QueuePage() {
     fetchWalkIns();
   }, []);
 
+  const handleSelect = (id: string) => {
+    // Toggle selection - if clicking the same customer, deselect
+    setSelectedCustomerId(prevId => prevId === id ? null : id);
+  };
+
   const handleStart = async (id: string) => {
     try {
       const response = await fetch(`/api/walkins/${id}`, {
@@ -53,6 +59,7 @@ export default function QueuePage() {
 
       if (!response.ok) throw new Error("Failed to update");
       toast.success("Service started");
+      setSelectedCustomerId(null); // Deselect after action
       fetchWalkIns();
     } catch (error) {
       toast.error("Failed to start service");
@@ -70,6 +77,7 @@ export default function QueuePage() {
 
       if (!response.ok) throw new Error("Failed to update");
       toast.success("Service completed");
+      setSelectedCustomerId(null); // Deselect after action
       fetchWalkIns();
     } catch (error) {
       toast.error("Failed to complete service");
@@ -87,6 +95,7 @@ export default function QueuePage() {
 
       if (!response.ok) throw new Error("Failed to delete");
       toast.success("Customer removed");
+      setSelectedCustomerId(null); // Deselect after deletion
       fetchWalkIns();
     } catch (error) {
       toast.error("Failed to remove customer");
@@ -155,6 +164,8 @@ export default function QueuePage() {
                     onStart={handleStart}
                     onDone={handleDone}
                     onDelete={handleDelete}
+                    isSelected={selectedCustomerId === walkIn.id}
+                    onSelect={handleSelect}
                   />
                 ))}
               </div>
@@ -179,6 +190,8 @@ export default function QueuePage() {
                     onStart={handleStart}
                     onDone={handleDone}
                     onDelete={handleDelete}
+                    isSelected={selectedCustomerId === walkIn.id}
+                    onSelect={handleSelect}
                   />
                 ))}
               </div>
@@ -204,6 +217,8 @@ export default function QueuePage() {
                     onDone={handleDone}
                     onDelete={handleDelete}
                     disableDelete={true}
+                    isSelected={selectedCustomerId === walkIn.id}
+                    onSelect={handleSelect}
                   />
                 ))}
               </div>
