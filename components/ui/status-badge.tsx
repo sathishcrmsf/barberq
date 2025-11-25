@@ -13,9 +13,9 @@ interface StatusBadgeProps {
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
   const variants = {
-    waiting: "bg-gray-100 text-gray-800 border-gray-300",
-    "in-progress": "bg-blue-100 text-blue-800 border-blue-300",
-    done: "bg-green-100 text-green-800 border-green-300",
+    waiting: "bg-gray-100 text-gray-700",
+    "in-progress": "bg-blue-50 text-[#007AFF]",
+    done: "bg-green-50 text-[#34C759]",
   };
 
   const labels = {
@@ -27,7 +27,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center px-3 py-1 rounded-full text-xs sm:text-sm font-medium border shrink-0",
+        "inline-flex items-center px-3 py-1 rounded-full text-sm font-medium shrink-0",
         variants[status],
         className
       )}
