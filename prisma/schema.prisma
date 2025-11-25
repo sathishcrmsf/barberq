@@ -12,12 +12,14 @@ datasource db {
 }
 
 model WalkIn {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   customerName String
   service      String
-  status       String   @default("waiting")
+  barberName   String?
+  status       String    @default("waiting")
   notes        String?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime  @default(now())
+  startedAt    DateTime?
 }
 
 model Service {

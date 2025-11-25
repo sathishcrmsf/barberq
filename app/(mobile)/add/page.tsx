@@ -34,6 +34,7 @@ export default function AddPage() {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [formData, setFormData] = useState({
     customerName: "",
+    barberName: "",
     service: "",
     notes: "",
   });
@@ -77,6 +78,7 @@ export default function AddPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerName: formData.customerName.trim(),
+          barberName: formData.barberName.trim() || undefined,
           service: formData.service,
           notes: formData.notes.trim() || undefined,
         }),
@@ -141,6 +143,26 @@ export default function AddPage() {
                   className="w-full h-12 sm:h-14 px-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
                   placeholder="Enter customer name"
                   required
+                />
+              </div>
+
+              {/* Barber/Stylist Name */}
+              <div>
+                <label
+                  htmlFor="barberName"
+                  className="block text-sm sm:text-base font-medium text-gray-700 mb-2"
+                >
+                  Barber/Stylist Name (Optional)
+                </label>
+                <input
+                  id="barberName"
+                  type="text"
+                  value={formData.barberName}
+                  onChange={(e) =>
+                    setFormData({ ...formData, barberName: e.target.value })
+                  }
+                  className="w-full h-12 sm:h-14 px-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                  placeholder="Enter barber or stylist name"
                 />
               </div>
 

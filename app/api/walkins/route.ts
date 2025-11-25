@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 
 const walkInSchema = z.object({
   customerName: z.string().min(1, "Customer name is required"),
+  barberName: z.string().optional(),
   service: z.string().min(1, "Service is required"),
   notes: z.string().optional(),
 });
@@ -42,6 +43,7 @@ export async function POST(request: NextRequest) {
     const walkIn = await prisma.walkIn.create({
       data: {
         customerName: validatedData.customerName,
+        barberName: validatedData.barberName,
         service: validatedData.service,
         notes: validatedData.notes,
         status: "waiting",

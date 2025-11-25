@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { QueueItem } from "@/components/ui/queue-item";
 import { Button } from "@/components/ui/button";
+import { CompletionPopup } from "@/components/ui/completion-popup";
 import { Plus, Settings } from "lucide-react";
 import { toast } from "sonner";
 
@@ -15,9 +16,19 @@ interface WalkIn {
   id: string;
   customerName: string;
   service: string;
+  barberName?: string | null;
   status: "waiting" | "in-progress" | "done";
   notes?: string | null;
   createdAt: string;
+  startedAt?: string | null;
+}
+
+interface CompletionData {
+  customerName: string;
+  service: string;
+  barberName?: string;
+  timeTaken: number;
+  amount: number;
 }
 
 export default function QueuePage() {
@@ -25,6 +36,8 @@ export default function QueuePage() {
   const [walkIns, setWalkIns] = useState<WalkIn[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [completionData, setCompletionData] = useState<CompletionData | null>(null);
+  const [showCompletionPopup, setShowCompletionPopup] = useState(false);
 
   const fetchWalkIns = async () => {
     try {
@@ -76,7 +89,23 @@ export default function QueuePage() {
       });
 
       if (!response.ok) throw new Error("Failed to update");
-      toast.success("Service completed");
+      
+      const data = await response.json();
+      
+      // Show completion popup with details
+      if (data.serviceDetails) {
+        setCompletionData({
+          customerName: data.customerName,
+          service: data.service,
+          barberName: data.barberName,
+          timeTaken: data.serviceDetails.timeTaken,
+          amount: data.serviceDetails.price,
+        });
+        setShowCompletionPopup(true);
+      } else {
+        toast.success("Service completed");
+      }
+      
       setSelectedCustomerId(null); // Deselect after action
       fetchWalkIns();
     } catch (error) {
@@ -109,8 +138,25 @@ export default function QueuePage() {
   const completedCustomers = walkIns.filter((w) => w.status === "done");
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Sticky Header */}
+    <>
+      {/* Completion Popup */}
+      {completionData && (
+        <CompletionPopup
+          isOpen={showCompletionPopup}
+          onClose={() => {
+            setShowCompletionPopup(false);
+            setCompletionData(null);
+          }}
+          customerName={completionData.customerName}
+          service={completionData.service}
+          barberName={completionData.barberName}
+          timeTaken={completionData.timeTaken}
+          amount={completionData.amount}
+        />
+      )}
+
+      <div className="flex flex-col h-screen bg-gray-50">
+        {/* Sticky Header */}
       <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-4 sm:py-5">
         <div className="flex items-center justify-between">
           <div className="flex-1 min-w-0">
@@ -228,7 +274,7 @@ export default function QueuePage() {
       </main>
 
       {/* Fixed Add Customer CTA */}
-      <div className="fixed bottom-4 left-4 right-4 z-50">
+      <div className="fixed bottom-4 left-4 right-4 z-40">
         <Button
           onClick={() => router.push("/add")}
           className="w-full h-12 bg-black text-white hover:bg-gray-900 rounded-xl shadow-lg"
@@ -239,6 +285,7 @@ export default function QueuePage() {
         </Button>
       </div>
     </div>
+    </>
   );
 }
 

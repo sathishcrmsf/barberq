@@ -22,10 +22,50 @@ export async function PATCH(
     const body = await request.json();
     const validatedData = updateSchema.parse(body);
 
+    // Get the current walk-in data
+    const currentWalkIn = await prisma.walkIn.findUnique({
+      where: { id },
+    });
+
+    if (!currentWalkIn) {
+      return NextResponse.json(
+        { error: "Walk-in not found" },
+        { status: 404 }
+      );
+    }
+
+    const updateData: any = { ...validatedData };
+
+    // If transitioning to "in-progress", set startedAt timestamp
+    if (validatedData.status === "in-progress" && !currentWalkIn.startedAt) {
+      updateData.startedAt = new Date();
+    }
+
     const walkIn = await prisma.walkIn.update({
       where: { id },
-      data: validatedData,
+      data: updateData,
     });
+
+    // If transitioning to "done", fetch service details for the completion popup
+    if (validatedData.status === "done") {
+      const service = await prisma.service.findFirst({
+        where: { name: walkIn.service },
+      });
+
+      // Calculate time taken in minutes
+      const timeTaken = walkIn.startedAt
+        ? Math.round((new Date().getTime() - new Date(walkIn.startedAt).getTime()) / 60000)
+        : 0;
+
+      return NextResponse.json({
+        ...walkIn,
+        serviceDetails: {
+          price: service?.price || 0,
+          duration: service?.duration || 0,
+          timeTaken,
+        },
+      }, { status: 200 });
+    }
 
     return NextResponse.json(walkIn, { status: 200 });
   } catch (error) {
