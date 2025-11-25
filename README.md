@@ -27,40 +27,54 @@ A mobile-first walk-in queue management system for barbershops. Built with Next.
 
 - Node.js 18+ 
 - npm or yarn
-- PostgreSQL database (for production/Vercel deployment)
+- PostgreSQL database (required for Vercel deployment)
 
-### Local Development
+### Local Development Setup
 
-For local development, you can optionally use SQLite by setting:
+**⚠️ Important**: The schema is configured for **PostgreSQL** by default (required for Vercel).
 
-```bash
-# .env.local (for local development only)
-DATABASE_URL="file:./prisma/dev.db"
-```
-
-### Installation
-
-1. Clone the repository
-2. Install dependencies:
+#### Option 1: Use PostgreSQL Locally (Recommended)
 
 ```bash
+# 1. Install PostgreSQL (if not installed)
+# macOS: brew install postgresql
+# Ubuntu: sudo apt-get install postgresql
+
+# 2. Create database
+createdb barberq
+
+# 3. Set up .env file
+cp .env.example .env
+# Update DATABASE_URL with your local PostgreSQL credentials
+
+# 4. Install dependencies and run migrations
 npm install
+npx prisma migrate dev
+npx prisma generate
 ```
 
-3. Set up the database:
+#### Option 2: Use SQLite Locally (Simpler, but needs manual step)
 
 ```bash
-npx prisma generate
+# 1. Update .env file
+DATABASE_URL="file:./prisma/dev.db"
+
+# 2. Change schema.prisma provider from "postgresql" to "sqlite"
+# Then run:
+npm install
 npx prisma migrate dev
+npx prisma generate
 ```
 
-4. Run the development server:
+**Note**: If using SQLite locally, remember to change back to PostgreSQL before deploying to Vercel!
+
+### Run Development Server
 
 ```bash
 npm run dev
 ```
 
-5. Open [http://localhost:3000](http://localhost:3000)
+Open [http://localhost:3000](http://localhost:3000)
 
 ## Project Structure
 
