@@ -24,7 +24,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body className="antialiased font-sans">
-        {children}
+        <div className="w-full max-w-md mx-auto">
+          {children}
+        </div>
         <Toaster position="top-center" />
       </body>
     </html>

@@ -1,12 +1,9 @@
 -- CreateTable
 CREATE TABLE "WalkIn" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "customerName" TEXT NOT NULL,
     "service" TEXT NOT NULL,
     "status" TEXT NOT NULL DEFAULT 'waiting',
     "notes" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "WalkIn_pkey" PRIMARY KEY ("id")
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-

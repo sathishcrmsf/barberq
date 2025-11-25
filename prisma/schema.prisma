@@ -1,13 +1,13 @@
-// @cursor: This schema defines the WalkIn model for the MVP.
-// Keep it simple - only what's needed per BRD.
-// Updated to use PostgreSQL for Vercel deployment.
+// @cursor v1.2: This schema defines the Service model for centralized
+// service management. Service.name must be unique. No foreign key relationship
+// with WalkIn (denormalized for flexibility).
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -18,5 +18,16 @@ model WalkIn {
   status       String   @default("waiting")
   notes        String?
   createdAt    DateTime @default(now())
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  price       Float
+  duration    Int      // in minutes
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 

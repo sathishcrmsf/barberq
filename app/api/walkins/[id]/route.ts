@@ -59,6 +59,26 @@ export async function DELETE(
   try {
     const { id } = await params;
 
+    // First, check if the walk-in exists and get its status
+    const walkIn = await prisma.walkIn.findUnique({
+      where: { id },
+    });
+
+    if (!walkIn) {
+      return NextResponse.json(
+        { error: "Walk-in not found" },
+        { status: 404 }
+      );
+    }
+
+    // Prevent deletion of completed customers
+    if (walkIn.status === "done") {
+      return NextResponse.json(
+        { error: "Cannot delete completed customers" },
+        { status: 403 }
+      );
+    }
+
     await prisma.walkIn.delete({
       where: { id },
     });

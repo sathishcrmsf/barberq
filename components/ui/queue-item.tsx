@@ -15,6 +15,7 @@ interface QueueItemProps {
   onStart: (id: string) => void;
   onDone: (id: string) => void;
   onDelete: (id: string) => void;
+  disableDelete?: boolean;
 }
 
 export function QueueItem({
@@ -26,17 +27,18 @@ export function QueueItem({
   onStart,
   onDone,
   onDelete,
+  disableDelete = false,
 }: QueueItemProps) {
   return (
-    <div className="flex flex-col gap-3 p-4 border-b border-gray-200 bg-white">
+    <div className="flex flex-col gap-3 p-4 sm:p-5 border-b border-gray-200 bg-white">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <h3 className="text-lg font-semibold text-gray-900 truncate">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
             {customerName}
           </h3>
-          <p className="text-sm text-gray-600 mt-1">{service}</p>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">{service}</p>
           {notes && (
-            <p className="text-xs text-gray-500 mt-1 italic">{notes}</p>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1 italic">{notes}</p>
           )}
         </div>
         <StatusBadge status={status} />
@@ -46,31 +48,33 @@ export function QueueItem({
         {status === "waiting" && (
           <Button
             onClick={() => onStart(id)}
-            className="flex-1 h-11 text-sm font-medium"
+            className="flex-1 bg-green-600 hover:bg-green-700"
             size="default"
           >
-            <Play className="w-4 h-4 mr-2" />
-            Start
+            <Play className="w-5 h-5" />
+            <span className="sm:inline">Start</span>
           </Button>
         )}
         {status === "in-progress" && (
           <Button
             onClick={() => onDone(id)}
-            className="flex-1 h-11 text-sm font-medium bg-green-600 hover:bg-green-700"
+            className="flex-1 bg-green-600 hover:bg-green-700"
             size="default"
           >
-            <Check className="w-4 h-4 mr-2" />
-            Done
+            <Check className="w-5 h-5" />
+            <span className="sm:inline">Done</span>
           </Button>
         )}
-        <Button
-          onClick={() => onDelete(id)}
-          variant="outline"
-          className="h-11 px-4 text-sm font-medium"
-          size="default"
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
+        {!disableDelete && (
+          <Button
+            onClick={() => onDelete(id)}
+            variant="outline"
+            size="icon"
+            className="shrink-0"
+          >
+            <Trash2 className="w-5 h-5" />
+          </Button>
+        )}
       </div>
     </div>
   );

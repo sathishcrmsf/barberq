@@ -2,11 +2,15 @@
 
 A mobile-first walk-in queue management system for barbershops. Built with Next.js 16, Prisma, and PostgreSQL.
 
+**Version:** 1.1
+
 ## Features
 
 ✅ Add walk-in customers with service details  
-✅ Real-time queue management  
+✅ Real-time queue management with status-based grouping  
 ✅ Status tracking (Waiting → In Progress → Done)  
+✅ Visual organization into three sections (v1.1)  
+✅ Delete protection for completed customers (v1.1)  
 ✅ Mobile-optimized Uber-style UI  
 ✅ Simple, fast, and minimal design  
 
@@ -79,7 +83,7 @@ barberq-mvp/
 - `GET /api/walkins` - Get all walk-ins
 - `POST /api/walkins` - Create new walk-in
 - `PATCH /api/walkins/[id]` - Update walk-in status
-- `DELETE /api/walkins/[id]` - Delete walk-in
+- `DELETE /api/walkins/[id]` - Delete walk-in (protected for completed customers)
 
 ## Deployment to Vercel
 
@@ -113,9 +117,13 @@ The MVP has been thoroughly tested:
 - ✅ Queue page with empty state
 - ✅ Add customer form with validation
 - ✅ Status updates (Waiting → In Progress → Done)
+- ✅ Status-based UI grouping (v1.1)
+- ✅ Delete protection for completed customers (v1.1)
 - ✅ Delete functionality
 - ✅ Mobile responsiveness (375px - 1920px)
 - ✅ Touch-friendly interactions
+
+📖 **v1.1 Changes**: See [BRD_V1.1_CHANGES.md](./BRD_V1.1_CHANGES.md) for detailed implementation notes
 
 ## Contributing
 
