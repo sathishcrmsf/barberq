@@ -21,6 +21,7 @@ export default function ServicesPageNew() {
     activeServices,
     inactiveServices,
     loading,
+    actionLoading,
     deleteService,
     duplicateService,
     toggleServiceStatus,
@@ -143,6 +144,7 @@ export default function ServicesPageNew() {
               onToggleStatus={handleToggleStatus}
               onDelete={handleDelete}
               loading={loading}
+              actionLoading={actionLoading}
             />
 
             {/* Quick Actions */}

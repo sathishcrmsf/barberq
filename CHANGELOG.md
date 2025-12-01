@@ -84,9 +84,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Clean typography and spacing
 - Monochrome palette with accent colors
 
+## [1.3.0] - 2025-12-01
+
+### Added
+- **Service Management Refactor**:
+  - New `ServiceTable` component with card-based layout
+  - Multi-step service creation drawer with 5-step workflow
+  - Service duplication feature
+  - Toggle service active/inactive status
+  - Stats dashboard (Total Services, Avg Price, Avg Duration)
+  - Empty states with actionable CTAs
+  - Loading skeleton states
+  
+- **Category Management Enhancement**:
+  - Active/Inactive category separation
+  - Icon mapping system for category visuals
+  - Gradient backgrounds for category icons
+  - Inline toggle for status changes
+  - Service count per category
+  - Display order indicator
+  - Pro tip cards for user guidance
+
+- **Enhanced Data Management**:
+  - `duplicateService()` function in useServices hook
+  - `toggleServiceStatus()` function in useServices hook
+  - Enhanced error handling (409, 403 status codes)
+  - Computed properties for active/inactive services
+  - Usage tracking support
+
+### Changed
+- Refactored `app/(mobile)/services/page.tsx` with modern UI
+- Enhanced `app/(mobile)/categories/page.tsx` with better UX
+- Improved `hooks/useServices.ts` with new CRUD operations
+- Updated service creation workflow to multi-step process
+
+### Technical Details
+- Created: `components/admin/services/service-table.tsx`
+- Created: `components/admin/services/add-service-drawer.tsx`
+- Modified: `app/(mobile)/services/page.tsx`
+- Modified: `app/(mobile)/categories/page.tsx`
+- Modified: `hooks/useServices.ts`
+- Added: `TODAYS_CHANGES.md` - Comprehensive documentation
+
+### UI/UX Improvements
+- Card-based layouts for better mobile experience
+- Color-coded status indicators
+- Hover states with shadow transitions
+- Touch-friendly button sizes (44px minimum)
+- Responsive grid layouts
+- Sticky headers for context retention
+- Smooth animations and transitions
+
+### Database
+- No schema changes required (backward compatible)
+
 ## [Unreleased]
 
 ### Planned for Future Versions
+- Drag-and-drop reordering for categories and services
+- Service image uploads
+- Tags and custom fields
+- Advanced filtering (by category, price, staff)
+- Bulk actions for services
 - Archive/hide completed customers
 - Date-based filtering
 - Search functionality

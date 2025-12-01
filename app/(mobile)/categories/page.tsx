@@ -12,8 +12,9 @@ import { SkeletonCard } from '@/components/shared/skeleton';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { CategoryBadge } from '@/components/ui/category-badge';
+import { Toggle } from '@/components/ui/toggle';
 import { 
-  FolderOpen, Plus, Edit, Trash2, ToggleLeft, ToggleRight,
+  FolderOpen, Plus, Edit, Trash2,
   Sparkles, Tag, GripVertical
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -180,32 +181,35 @@ export default function CategoriesPageNew() {
                           </div>
 
                           {/* Actions */}
-                          <div className="flex flex-col gap-2">
+                          <div className="flex flex-col gap-3 min-w-[140px]">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleEdit(category)}
-                              className="w-full justify-start"
+                              className="w-full justify-start hover:bg-gray-100"
                             >
-                              <Edit className="w-4 h-4 mr-2" />
+                              <Edit className="w-4 h-4 mr-2.5" />
                               Edit
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleToggleStatus(category)}
-                              className="w-full justify-start"
-                            >
-                              <ToggleLeft className="w-4 h-4 mr-2" />
-                              Deactivate
-                            </Button>
+
+                            {/* Toggle Switch */}
+                            <div className="flex items-center gap-3 px-2 py-1">
+                              <Toggle
+                                checked={category.isActive}
+                                onChange={() => handleToggleStatus(category)}
+                              />
+                              <span className="text-sm font-medium text-gray-700">
+                                {category.isActive ? 'Active' : 'Inactive'}
+                              </span>
+                            </div>
+
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleDelete(category)}
-                              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 font-medium"
                             >
-                              <Trash2 className="w-4 h-4 mr-2" />
+                              <Trash2 className="w-4 h-4 mr-2.5" />
                               Delete
                             </Button>
                           </div>
@@ -251,22 +255,27 @@ export default function CategoriesPageNew() {
                             </p>
                           </div>
 
-                          <div className="flex gap-2">
+                          <div className="flex flex-col gap-3 min-w-[140px]">
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="sm"
                               onClick={() => handleEdit(category)}
+                              className="w-full justify-start hover:bg-gray-100"
                             >
+                              <Edit className="w-4 h-4 mr-2.5" />
                               Edit
                             </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleToggleStatus(category)}
-                            >
-                              <ToggleRight className="w-4 h-4 mr-2" />
-                              Activate
-                            </Button>
+
+                            {/* Toggle Switch */}
+                            <div className="flex items-center gap-3 px-2 py-1">
+                              <Toggle
+                                checked={category.isActive}
+                                onChange={() => handleToggleStatus(category)}
+                              />
+                              <span className="text-sm font-medium text-gray-700">
+                                {category.isActive ? 'Active' : 'Inactive'}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </Card>

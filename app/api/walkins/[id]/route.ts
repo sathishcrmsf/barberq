@@ -25,6 +25,9 @@ export async function PATCH(
     // Get the current walk-in data
     const currentWalkIn = await prisma.walkIn.findUnique({
       where: { id },
+      include: {
+        customer: true,
+      },
     });
 
     if (!currentWalkIn) {
@@ -34,16 +37,33 @@ export async function PATCH(
       );
     }
 
-    const updateData: any = { ...validatedData };
+    // Build update data with proper typing
+    const updateData: {
+      status?: string;
+      startedAt?: Date;
+      completedAt?: Date;
+    } = {};
+
+    if (validatedData.status) {
+      updateData.status = validatedData.status;
+    }
 
     // If transitioning to "in-progress", set startedAt timestamp
     if (validatedData.status === "in-progress" && !currentWalkIn.startedAt) {
       updateData.startedAt = new Date();
     }
 
+    // If transitioning to "done", set completedAt timestamp
+    if (validatedData.status === "done") {
+      updateData.completedAt = new Date();
+    }
+
     const walkIn = await prisma.walkIn.update({
       where: { id },
       data: updateData,
+      include: {
+        customer: true,
+      },
     });
 
     // If transitioning to "done", fetch service details for the completion popup
@@ -102,6 +122,9 @@ export async function DELETE(
     // First, check if the walk-in exists and get its status
     const walkIn = await prisma.walkIn.findUnique({
       where: { id },
+      include: {
+        customer: true,
+      },
     });
 
     if (!walkIn) {

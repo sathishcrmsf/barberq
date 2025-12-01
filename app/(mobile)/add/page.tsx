@@ -1,11 +1,11 @@
-// @cursor v1.2: Service field now uses dynamic dropdown populated from API.
-// Falls back to text input if no services configured.
-// Stores service name as string (not foreign key reference).
+// @cursor v1.4: Updated to use phone-based customer lookup.
+// Phone number is entered first, system recognizes existing customers or creates new ones.
+// Customer name can be edited when recognized.
 
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { validateAndNormalizePhone } from "@/lib/utils";
 
 interface Service {
   id: string;
@@ -26,14 +27,24 @@ interface Service {
   isActive: boolean;
 }
 
+interface Customer {
+  id: string;
+  phone: string;
+  name: string;
+}
+
 export default function AddPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [loadingServices, setLoadingServices] = useState(true);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [foundCustomer, setFoundCustomer] = useState<Customer | null>(null);
   const [formData, setFormData] = useState({
-    customerName: "",
+    phone: "",
+    name: "",
     barberName: "",
     service: "",
     notes: "",
@@ -57,10 +68,117 @@ export default function AddPage() {
     fetchServices();
   }, []);
 
+  // Lookup customer by phone number
+  const handlePhoneLookup = async (phone: string) => {
+    const normalizedPhone = validateAndNormalizePhone(phone);
+    if (!normalizedPhone) {
+      setFoundCustomer(null);
+      return;
+    }
+
+    setLookupLoading(true);
+    try {
+      const response = await fetch(`/api/customers?phone=${encodeURIComponent(normalizedPhone)}`);
+      
+      if (response.ok) {
+        const customer = await response.json();
+        setFoundCustomer(customer);
+        setFormData((prev) => ({ ...prev, name: customer.name }));
+      } else if (response.status === 404) {
+        // Customer not found - new customer (this is expected)
+        setFoundCustomer(null);
+        setFormData((prev) => ({ ...prev, name: "" }));
+      } else if (response.status === 400) {
+        // Invalid phone format - don't show error, just clear customer
+        const errorData = await response.json().catch(() => ({ error: "Invalid phone format" }));
+        console.warn("Phone validation error:", errorData.error);
+        setFoundCustomer(null);
+        setFormData((prev) => ({ ...prev, name: "" }));
+      } else {
+        // Server error or other unexpected error - log but don't throw
+        try {
+          const errorData = await response.json();
+          console.error("Error looking up customer - Full response:", {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorData.error,
+            details: errorData.details,
+            fullError: errorData
+          });
+          
+          // If it's a database initialization error, show a helpful message
+          if (errorData.error?.includes("Database not initialized") || 
+              errorData.error?.includes("Database connection failed")) {
+            console.warn("⚠️ Database setup issue detected. Please restart your dev server and ensure migrations are applied.");
+          }
+        } catch (parseError) {
+          console.error("Error parsing error response:", parseError);
+          console.error("Response status:", response.status, response.statusText);
+        }
+        setFoundCustomer(null);
+        // Don't show toast for lookup errors - it's not critical
+      }
+    } catch (error) {
+      // Network error or other exception
+      console.error("Error looking up customer:", error);
+      setFoundCustomer(null);
+      // Don't show toast for network errors during lookup - it's not critical
+    } finally {
+      setLookupLoading(false);
+    }
+  };
+
+  // Handle phone input change
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value;
+    
+    // Auto-add +91 prefix if user starts typing digits
+    if (value && !value.startsWith("+")) {
+      // Remove any non-digits
+      const digits = value.replace(/\D/g, "");
+      if (digits.length > 0) {
+        value = `+91${digits}`;
+      }
+    }
+    
+    setFormData((prev) => ({ ...prev, phone: value }));
+  };
+
+  // Handle phone blur - lookup customer
+  const handlePhoneBlur = () => {
+    if (formData.phone.trim()) {
+      handlePhoneLookup(formData.phone);
+    }
+  };
+
+  // Pre-fill form from query parameters (for quick add from customer list)
+  useEffect(() => {
+    const phoneParam = searchParams.get("phone");
+    const nameParam = searchParams.get("name");
+    
+    if (phoneParam) {
+      setFormData((prev) => ({
+        ...prev,
+        phone: phoneParam,
+        name: nameParam || "",
+      }));
+      // Auto-lookup customer if phone is provided
+      handlePhoneLookup(phoneParam);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.customerName.trim()) {
+    // Validate phone number
+    const normalizedPhone = validateAndNormalizePhone(formData.phone);
+    if (!normalizedPhone) {
+      toast.error("Please enter a valid phone number (+91 followed by 10 digits)");
+      return;
+    }
+
+    if (!formData.name.trim()) {
       toast.error("Customer name is required");
       return;
     }
@@ -73,11 +191,13 @@ export default function AddPage() {
     setLoading(true);
 
     try {
+      // The API will handle customer lookup/creation and linking
       const response = await fetch("/api/walkins", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customerName: formData.customerName.trim(),
+          phone: normalizedPhone,
+          name: formData.name.trim(),
           barberName: formData.barberName.trim() || undefined,
           service: formData.service,
           notes: formData.notes.trim() || undefined,
@@ -125,25 +245,66 @@ export default function AddPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+              {/* Phone Number */}
+              <div>
+                <label
+                  htmlFor="phone"
+                  className="block text-sm sm:text-base font-medium text-gray-700 mb-2"
+                >
+                  Phone Number *
+                </label>
+                <div className="relative">
+                  <input
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={handlePhoneChange}
+                    onBlur={handlePhoneBlur}
+                    className="w-full h-12 sm:h-14 px-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                    placeholder="+91XXXXXXXXXX"
+                    required
+                    maxLength={13}
+                  />
+                  {lookupLoading && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    </div>
+                  )}
+                </div>
+                {foundCustomer && (
+                  <p className="mt-1 text-sm text-green-600">
+                    ✓ Customer found: {foundCustomer.name}
+                  </p>
+                )}
+              </div>
+
               {/* Customer Name */}
               <div>
                 <label
-                  htmlFor="customerName"
+                  htmlFor="name"
                   className="block text-sm sm:text-base font-medium text-gray-700 mb-2"
                 >
                   Customer Name *
                 </label>
                 <input
-                  id="customerName"
+                  id="name"
                   type="text"
-                  value={formData.customerName}
+                  value={formData.name}
                   onChange={(e) =>
-                    setFormData({ ...formData, customerName: e.target.value })
+                    setFormData({ ...formData, name: e.target.value })
                   }
                   className="w-full h-12 sm:h-14 px-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
                   placeholder="Enter customer name"
                   required
                 />
+                {foundCustomer && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    You can edit the name if needed
+                  </p>
+                )}
               </div>
 
               {/* Barber/Stylist Name */}

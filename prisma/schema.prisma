@@ -1,6 +1,7 @@
 // @cursor v1.3: Enhanced schema with Categories, Staff, and Staff-Service assignments.
 // This enables service organization, staff-skill matching, and analytics capabilities.
 // Service.name must be unique. WalkIn stores service name as string (denormalized).
+// @cursor v1.4: Added Customer model for phone-based customer management.
 
 generator client {
   provider = "prisma-client-js"
@@ -11,10 +12,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Customer records identified by phone number
+model Customer {
+  id        String   @id @default(cuid())
+  phone     String   @unique // Format: +91XXXXXXXXXX
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  walkIns   WalkIn[]
+}
+
 // Walk-in customer queue
 model WalkIn {
   id           String    @id @default(cuid())
-  customerName String
+  customerId   String    // Link to Customer
+  customer     Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerName String?   // Legacy field, kept for backward compatibility
   service      String    // Service name (denormalized)
   barberName   String?   // Legacy field
   staffId      String?   // v1.3: Link to Staff member
@@ -23,6 +37,7 @@ model WalkIn {
   notes        String?
   createdAt    DateTime  @default(now())
   startedAt    DateTime?
+  completedAt  DateTime? // When service was marked as done
 }
 
 // Service categories for organization

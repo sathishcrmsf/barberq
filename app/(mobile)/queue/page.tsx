@@ -12,15 +12,24 @@ import { CompletionPopup } from "@/components/ui/completion-popup";
 import { Plus, Settings, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
+interface Customer {
+  id: string;
+  phone: string;
+  name: string;
+}
+
 interface WalkIn {
   id: string;
-  customerName: string;
+  customerId: string;
+  customer: Customer;
+  customerName?: string | null; // Legacy field, kept for backward compatibility
   service: string;
   barberName?: string | null;
   status: "waiting" | "in-progress" | "done";
   notes?: string | null;
   createdAt: string;
   startedAt?: string | null;
+  completedAt?: string | null;
 }
 
 interface CompletionData {
@@ -89,14 +98,19 @@ export default function QueuePage() {
         body: JSON.stringify({ status: "done" }),
       });
 
-      if (!response.ok) throw new Error("Failed to update");
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("API Error:", errorData);
+        throw new Error(errorData.error || "Failed to update");
+      }
       
       const data = await response.json();
       
       // Show completion popup with details
       if (data.serviceDetails) {
+        const customerName = data.customer?.name || data.customerName || "Customer";
         setCompletionData({
-          customerName: data.customerName,
+          customerName: customerName,
           service: data.service,
           barberName: data.barberName,
           timeTaken: data.serviceDetails.timeTaken,
@@ -133,10 +147,25 @@ export default function QueuePage() {
     }
   };
 
+  // Helper function to check if a date is today
+  const isToday = (dateString: string | null | undefined) => {
+    if (!dateString) return false;
+    const date = new Date(dateString);
+    const today = new Date();
+    return (
+      date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear()
+    );
+  };
+
   // Group walk-ins by status
   const waitingCustomers = walkIns.filter((w) => w.status === "waiting");
   const inProgressCustomers = walkIns.filter((w) => w.status === "in-progress");
-  const completedCustomers = walkIns.filter((w) => w.status === "done");
+  const completedCustomers = walkIns.filter((w) => w.status === "done" && isToday(w.completedAt));
+
+  // Calculate total visible customers (only show count for customers that are actually displayed)
+  const visibleCustomerCount = waitingCustomers.length + inProgressCustomers.length + completedCustomers.length;
 
   return (
     <>
@@ -172,7 +201,7 @@ export default function QueuePage() {
           <div className="flex-1 min-w-0">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Queue</h1>
             <p className="text-sm sm:text-base text-gray-600 mt-1">
-              {walkIns.length} {walkIns.length === 1 ? "customer" : "customers"}
+              {visibleCustomerCount} customer{visibleCustomerCount !== 1 ? "s" : ""}
             </p>
           </div>
           <div className="relative">
@@ -257,7 +286,7 @@ export default function QueuePage() {
                   <QueueItem
                     key={walkIn.id}
                     id={walkIn.id}
-                    customerName={walkIn.customerName}
+                    customerName={walkIn.customer?.name || walkIn.customerName || "Customer"}
                     service={walkIn.service}
                     status={walkIn.status}
                     notes={walkIn.notes}
@@ -283,7 +312,7 @@ export default function QueuePage() {
                   <QueueItem
                     key={walkIn.id}
                     id={walkIn.id}
-                    customerName={walkIn.customerName}
+                    customerName={walkIn.customer?.name || walkIn.customerName || "Customer"}
                     service={walkIn.service}
                     status={walkIn.status}
                     notes={walkIn.notes}
@@ -309,7 +338,7 @@ export default function QueuePage() {
                   <QueueItem
                     key={walkIn.id}
                     id={walkIn.id}
-                    customerName={walkIn.customerName}
+                    customerName={walkIn.customer?.name || walkIn.customerName || "Customer"}
                     service={walkIn.service}
                     status={walkIn.status}
                     notes={walkIn.notes}

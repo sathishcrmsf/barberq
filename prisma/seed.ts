@@ -11,6 +11,7 @@ async function main() {
   // Clear existing data
   console.log('🧹 Cleaning existing data...')
   await prisma.walkIn.deleteMany()
+  await prisma.customer.deleteMany()
   await prisma.staffService.deleteMany()
   await prisma.staff.deleteMany()
   await prisma.service.deleteMany()
@@ -331,13 +332,286 @@ async function main() {
     }),
   ])
 
-  // 5. Create Walk-Ins (Queue Data)
-  console.log('🚶 Creating walk-in customers...')
+  // 5. Create Customers with Historical Visits
+  console.log('👥 Creating customers with visit history...')
   const now = new Date()
+  
+  // Helper function to create historical visits
+  const createHistoricalVisits = (
+    customerId: string,
+    customerName: string,
+    serviceName: string,
+    staffId: string | null,
+    monthsBack: number,
+    intervalMonths: number,
+    serviceDuration: number
+  ) => {
+    const visits = []
+    const today = new Date()
+    
+    for (let i = 0; i < monthsBack; i += intervalMonths) {
+      const visitDate = new Date(today)
+      visitDate.setMonth(today.getMonth() - i)
+      // Randomize day of month (1-28 to avoid month-end issues)
+      visitDate.setDate(Math.floor(Math.random() * 28) + 1)
+      // Randomize time (9 AM - 5 PM)
+      visitDate.setHours(9 + Math.floor(Math.random() * 8), Math.floor(Math.random() * 60), 0, 0)
+      
+      const createdAt = new Date(visitDate)
+      const startedAt = new Date(visitDate.getTime() + 5 * 60 * 1000) // Started 5 mins after arrival
+      const completedAt = new Date(startedAt.getTime() + serviceDuration * 60 * 1000)
+      
+      visits.push({
+        customerId,
+        customerName,
+        service: serviceName,
+        staffId,
+        status: 'done',
+        createdAt,
+        startedAt,
+        completedAt,
+      })
+    }
+    
+    return visits
+  }
+  
+  // Create customers with different visit frequencies
+  
+  // Monthly regular customers (visit every month for past 8-12 months)
+  const monthlyCustomer1 = await prisma.customer.create({
+    data: { phone: '+911234567890', name: 'Rajesh Kumar' },
+  })
+  const monthlyCustomer2 = await prisma.customer.create({
+    data: { phone: '+911234567891', name: 'Priya Sharma' },
+  })
+  const monthlyCustomer3 = await prisma.customer.create({
+    data: { phone: '+911234567892', name: 'Amit Patel' },
+  })
+  const monthlyCustomer4 = await prisma.customer.create({
+    data: { phone: '+911234567898', name: 'Ravi Nair' },
+  })
+  const monthlyCustomer5 = await prisma.customer.create({
+    data: { phone: '+911234567899', name: 'Sunita Desai' },
+  })
+  const monthlyCustomer6 = await prisma.customer.create({
+    data: { phone: '+911234567900', name: 'Mohammed Ali' },
+  })
+  const monthlyCustomer7 = await prisma.customer.create({
+    data: { phone: '+911234567901', name: 'Kavita Joshi' },
+  })
+  
+  // Bi-monthly customers (visit every 2 months for past 10-12 months = 5-6 visits)
+  const biMonthlyCustomer1 = await prisma.customer.create({
+    data: { phone: '+911234567893', name: 'Vikram Singh' },
+  })
+  const biMonthlyCustomer2 = await prisma.customer.create({
+    data: { phone: '+911234567894', name: 'Anjali Mehta' },
+  })
+  const biMonthlyCustomer3 = await prisma.customer.create({
+    data: { phone: '+911234567902', name: 'Arjun Kapoor' },
+  })
+  const biMonthlyCustomer4 = await prisma.customer.create({
+    data: { phone: '+911234567903', name: 'Meera Iyer' },
+  })
+  const biMonthlyCustomer5 = await prisma.customer.create({
+    data: { phone: '+911234567904', name: 'Suresh Menon' },
+  })
+  
+  // Quarterly customers (visit every 3 months)
+  const quarterlyCustomer1 = await prisma.customer.create({
+    data: { phone: '+911234567905', name: 'Neha Gupta' },
+  })
+  const quarterlyCustomer2 = await prisma.customer.create({
+    data: { phone: '+911234567906', name: 'Rohit Agarwal' },
+  })
+  const quarterlyCustomer3 = await prisma.customer.create({
+    data: { phone: '+911234567907', name: 'Pooja Shah' },
+  })
+  
+  // Rare customers (1-2 visits in past year)
+  const rareCustomer1 = await prisma.customer.create({
+    data: { phone: '+911234567895', name: 'Deepak Verma' },
+  })
+  const rareCustomer2 = await prisma.customer.create({
+    data: { phone: '+911234567896', name: 'Sneha Reddy' },
+  })
+  const rareCustomer3 = await prisma.customer.create({
+    data: { phone: '+911234567897', name: 'Karan Malhotra' },
+  })
+  const rareCustomer4 = await prisma.customer.create({
+    data: { phone: '+911234567908', name: 'Aditya Rao' },
+  })
+  const rareCustomer5 = await prisma.customer.create({
+    data: { phone: '+911234567909', name: 'Divya Nair' },
+  })
+  const rareCustomer6 = await prisma.customer.create({
+    data: { phone: '+911234567910', name: 'Varun Krishnan' },
+  })
+  const rareCustomer7 = await prisma.customer.create({
+    data: { phone: '+911234567911', name: 'Lakshmi Pillai' },
+  })
+  const rareCustomer8 = await prisma.customer.create({
+    data: { phone: '+911234567912', name: 'Gaurav Chawla' },
+  })
+  
+  // Create historical visits for monthly customers
+  console.log('📅 Creating monthly visit history...')
+  const monthlyVisits1 = createHistoricalVisits(
+    monthlyCustomer1.id, monthlyCustomer1.name, 'Premium Fade', staff[0].id, 8, 1, 45
+  )
+  const monthlyVisits2 = createHistoricalVisits(
+    monthlyCustomer2.id, monthlyCustomer2.name, 'Classic Haircut', staff[1].id, 8, 1, 30
+  )
+  const monthlyVisits3 = createHistoricalVisits(
+    monthlyCustomer3.id, monthlyCustomer3.name, 'Beard & Haircut Combo', staff[1].id, 8, 1, 50
+  )
+  const monthlyVisits4 = createHistoricalVisits(
+    monthlyCustomer4.id, monthlyCustomer4.name, 'Classic Haircut', staff[0].id, 10, 1, 30
+  )
+  const monthlyVisits5 = createHistoricalVisits(
+    monthlyCustomer5.id, monthlyCustomer5.name, 'Hair Styling', staff[2].id, 9, 1, 30
+  )
+  const monthlyVisits6 = createHistoricalVisits(
+    monthlyCustomer6.id, monthlyCustomer6.name, 'Premium Fade', staff[0].id, 12, 1, 45
+  )
+  const monthlyVisits7 = createHistoricalVisits(
+    monthlyCustomer7.id, monthlyCustomer7.name, 'Beard Trim', staff[1].id, 7, 1, 20
+  )
+  
+  // Create historical visits for bi-monthly customers
+  console.log('📅 Creating bi-monthly visit history...')
+  const biMonthlyVisits1 = createHistoricalVisits(
+    biMonthlyCustomer1.id, biMonthlyCustomer1.name, 'Classic Haircut', staff[0].id, 10, 2, 30
+  )
+  const biMonthlyVisits2 = createHistoricalVisits(
+    biMonthlyCustomer2.id, biMonthlyCustomer2.name, 'Hair Styling', staff[2].id, 10, 2, 30
+  )
+  const biMonthlyVisits3 = createHistoricalVisits(
+    biMonthlyCustomer3.id, biMonthlyCustomer3.name, 'Premium Fade', staff[0].id, 12, 2, 45
+  )
+  const biMonthlyVisits4 = createHistoricalVisits(
+    biMonthlyCustomer4.id, biMonthlyCustomer4.name, 'Beard & Haircut Combo', staff[1].id, 10, 2, 50
+  )
+  const biMonthlyVisits5 = createHistoricalVisits(
+    biMonthlyCustomer5.id, biMonthlyCustomer5.name, 'Classic Haircut', staff[1].id, 8, 2, 30
+  )
+  
+  // Create historical visits for quarterly customers
+  console.log('📅 Creating quarterly visit history...')
+  const quarterlyVisits1 = createHistoricalVisits(
+    quarterlyCustomer1.id, quarterlyCustomer1.name, 'Hair Coloring', staff[2].id, 12, 3, 90
+  )
+  const quarterlyVisits2 = createHistoricalVisits(
+    quarterlyCustomer2.id, quarterlyCustomer2.name, 'Classic Haircut', staff[0].id, 9, 3, 30
+  )
+  const quarterlyVisits3 = createHistoricalVisits(
+    quarterlyCustomer3.id, quarterlyCustomer3.name, 'Hot Towel Shave', staff[1].id, 12, 3, 35
+  )
+  
+  // Create rare visits (1-2 visits in past year)
+  console.log('📅 Creating rare visit history...')
+  const rareVisits1 = createHistoricalVisits(
+    rareCustomer1.id, rareCustomer1.name, 'Hot Towel Shave', staff[1].id, 8, 8, 35
+  )
+  const rareVisits2a = createHistoricalVisits(
+    rareCustomer2.id, rareCustomer2.name, 'Hair Coloring', staff[2].id, 6, 6, 90
+  )
+  const rareVisits2b = createHistoricalVisits(
+    rareCustomer2.id, rareCustomer2.name, 'Hair Coloring', staff[2].id, 2, 2, 90
+  )
+  const rareVisits3 = createHistoricalVisits(
+    rareCustomer3.id, rareCustomer3.name, 'Buzz Cut', staff[3].id, 10, 10, 20
+  )
+  const rareVisits4 = createHistoricalVisits(
+    rareCustomer4.id, rareCustomer4.name, 'Classic Haircut', staff[0].id, 11, 11, 30
+  )
+  const rareVisits5a = createHistoricalVisits(
+    rareCustomer5.id, rareCustomer5.name, 'Scalp Treatment', staff[2].id, 7, 7, 40
+  )
+  const rareVisits5b = createHistoricalVisits(
+    rareCustomer5.id, rareCustomer5.name, 'Hair Styling', staff[2].id, 3, 3, 30
+  )
+  const rareVisits6 = createHistoricalVisits(
+    rareCustomer6.id, rareCustomer6.name, 'Beard Trim', staff[1].id, 9, 9, 20
+  )
+  const rareVisits7 = createHistoricalVisits(
+    rareCustomer7.id, rareCustomer7.name, 'Kids Haircut', staff[3].id, 6, 6, 25
+  )
+  const rareVisits8 = createHistoricalVisits(
+    rareCustomer8.id, rareCustomer8.name, 'Premium Fade', staff[0].id, 5, 5, 45
+  )
+  
+  // Insert all historical visits
+  const allHistoricalVisits = [
+    ...monthlyVisits1,
+    ...monthlyVisits2,
+    ...monthlyVisits3,
+    ...monthlyVisits4,
+    ...monthlyVisits5,
+    ...monthlyVisits6,
+    ...monthlyVisits7,
+    ...biMonthlyVisits1,
+    ...biMonthlyVisits2,
+    ...biMonthlyVisits3,
+    ...biMonthlyVisits4,
+    ...biMonthlyVisits5,
+    ...quarterlyVisits1,
+    ...quarterlyVisits2,
+    ...quarterlyVisits3,
+    ...rareVisits1,
+    ...rareVisits2a,
+    ...rareVisits2b,
+    ...rareVisits3,
+    ...rareVisits4,
+    ...rareVisits5a,
+    ...rareVisits5b,
+    ...rareVisits6,
+    ...rareVisits7,
+    ...rareVisits8,
+  ]
+  
+  await prisma.walkIn.createMany({
+    data: allHistoricalVisits,
+  })
+
+  // 6. Create Current Walk-Ins (Queue Data)
+  console.log('🚶 Creating current walk-in customers...')
+  
+  // Create customers for current walk-ins
+  const currentCustomer1 = await prisma.customer.create({
+    data: { phone: '+911234567913', name: 'Michael Johnson' },
+  })
+  const currentCustomer2 = await prisma.customer.create({
+    data: { phone: '+911234567914', name: 'Sarah Martinez' },
+  })
+  const currentCustomer3 = await prisma.customer.create({
+    data: { phone: '+911234567915', name: 'David Lee' },
+  })
+  const currentCustomer4 = await prisma.customer.create({
+    data: { phone: '+911234567916', name: 'Tommy Anderson' },
+  })
+  const currentCustomer5 = await prisma.customer.create({
+    data: { phone: '+911234567917', name: 'Robert Wilson' },
+  })
+  const currentCustomer6 = await prisma.customer.create({
+    data: { phone: '+911234567918', name: 'Chris Brown' },
+  })
+  const currentCustomer7 = await prisma.customer.create({
+    data: { phone: '+911234567919', name: 'Jason Taylor' },
+  })
+  const currentCustomer8 = await prisma.customer.create({
+    data: { phone: '+911234567920', name: 'Kevin White' },
+  })
+  const currentCustomer9 = await prisma.customer.create({
+    data: { phone: '+911234567921', name: 'Daniel Harris' },
+  })
+  
   const walkIns = await Promise.all([
     // Currently being served
     prisma.walkIn.create({
       data: {
+        customerId: currentCustomer1.id,
         customerName: 'Michael Johnson',
         service: 'Premium Fade',
         staffId: staff[0].id,
@@ -349,6 +623,7 @@ async function main() {
     }),
     prisma.walkIn.create({
       data: {
+        customerId: currentCustomer2.id,
         customerName: 'Sarah Martinez',
         service: 'Hair Coloring',
         staffId: staff[2].id,
@@ -362,6 +637,7 @@ async function main() {
     // Waiting in queue
     prisma.walkIn.create({
       data: {
+        customerId: currentCustomer3.id,
         customerName: 'David Lee',
         service: 'Classic Haircut',
         staffId: staff[1].id,
@@ -372,6 +648,7 @@ async function main() {
     }),
     prisma.walkIn.create({
       data: {
+        customerId: currentCustomer4.id,
         customerName: 'Tommy Anderson',
         service: 'Kids Haircut',
         staffId: staff[3].id,
@@ -382,6 +659,7 @@ async function main() {
     }),
     prisma.walkIn.create({
       data: {
+        customerId: currentCustomer5.id,
         customerName: 'Robert Wilson',
         service: 'Beard & Haircut Combo',
         status: 'waiting',
@@ -391,6 +669,7 @@ async function main() {
     }),
     prisma.walkIn.create({
       data: {
+        customerId: currentCustomer6.id,
         customerName: 'Chris Brown',
         service: 'Buzz Cut',
         status: 'waiting',
@@ -402,33 +681,39 @@ async function main() {
     // Recently completed (for analytics)
     prisma.walkIn.create({
       data: {
+        customerId: currentCustomer7.id,
         customerName: 'Jason Taylor',
         service: 'Hot Towel Shave',
         staffId: staff[1].id,
-        status: 'completed',
+        status: 'done',
         notes: 'Very satisfied, tipped well',
         createdAt: new Date(now.getTime() - 90 * 60 * 1000), // 90 mins ago
         startedAt: new Date(now.getTime() - 85 * 60 * 1000),
+        completedAt: new Date(now.getTime() - 60 * 60 * 1000), // Completed 60 mins ago
       },
     }),
     prisma.walkIn.create({
       data: {
+        customerId: currentCustomer8.id,
         customerName: 'Kevin White',
         service: 'Premium Fade',
         staffId: staff[0].id,
-        status: 'completed',
+        status: 'done',
         createdAt: new Date(now.getTime() - 120 * 60 * 1000), // 2 hours ago
         startedAt: new Date(now.getTime() - 115 * 60 * 1000),
+        completedAt: new Date(now.getTime() - 90 * 60 * 1000), // Completed 90 mins ago
       },
     }),
     prisma.walkIn.create({
       data: {
+        customerId: currentCustomer9.id,
         customerName: 'Daniel Harris',
         service: 'Beard Trim',
         staffId: staff[0].id,
-        status: 'completed',
+        status: 'done',
         createdAt: new Date(now.getTime() - 135 * 60 * 1000),
         startedAt: new Date(now.getTime() - 130 * 60 * 1000),
+        completedAt: new Date(now.getTime() - 105 * 60 * 1000), // Completed 105 mins ago
       },
     }),
   ])
@@ -439,7 +724,15 @@ async function main() {
    - ${categories.length} Categories
    - ${services.length} Services
    - ${staff.length} Staff Members
-   - ${walkIns.length} Walk-In Customers
+   - 32 Customers total (23 with historical visits + 9 current walk-ins)
+   - ${allHistoricalVisits.length} Historical visits
+   - ${walkIns.length} Current Walk-In Customers
+   
+💡 Customer Visit Patterns:
+   - Monthly Regulars (7 customers): 7-12 visits each over 7-12 months
+   - Bi-Monthly Regulars (5 customers): 4-6 visits each over 8-12 months
+   - Quarterly Visitors (3 customers): 3-4 visits each over 9-12 months
+   - Rare Visitors (8 customers): 1-2 visits in past year
    
 💡 Demo ready! Your queue has:
    - 2 customers currently being served

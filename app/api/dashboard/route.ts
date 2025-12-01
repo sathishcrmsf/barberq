@@ -24,11 +24,9 @@ export async function GET() {
     ]);
 
     // Calculate KPIs
-    const queueWalkIns = walkIns.filter(
-      (w) => w.status === "waiting" || w.status === "in-progress"
-    );
     const todayWalkIns = walkIns.filter((w) => w.createdAt >= todayStart);
     const completedToday = todayWalkIns.filter((w) => w.status === "done");
+    const inProgressToday = walkIns.filter((w) => w.status === "in-progress");
     const waitingWalkIns = walkIns.filter((w) => w.status === "waiting");
 
     // Calculate average wait time
@@ -188,17 +186,17 @@ export async function GET() {
           }
         : undefined,
       estimatedWait: avgWaitTime,
-      queueCount: queueWalkIns.length,
+      queueCount: waitingWalkIns.length,
     };
 
     // Return all dashboard data
     return NextResponse.json(
       {
         kpis: {
-          queueCount: queueWalkIns.length,
+          queueCount: waitingWalkIns.length,
           avgWaitTime,
           staffActive,
-          completedToday: completedToday.length,
+          inProgressToday: inProgressToday.length,
           revenueToday: Math.round(revenueToday),
         },
         insights,

@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
-    "db:seed": "tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:fix-status": "tsx scripts/fix-status-migration.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

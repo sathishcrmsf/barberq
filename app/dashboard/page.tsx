@@ -18,6 +18,8 @@ import {
   Tags,
   UsersIcon,
   ChevronRight,
+  Activity,
+  Phone,
 } from "lucide-react";
 import { MiniStatCard } from "@/components/ui/mini-stat-card";
 import { PremiumActionCard } from "@/components/ui/premium-action-card";
@@ -29,7 +31,7 @@ interface DashboardData {
     queueCount: number;
     avgWaitTime: number;
     staffActive: number;
-    completedToday: number;
+    inProgressToday: number;
     revenueToday: number;
   };
   insights: Array<{
@@ -182,9 +184,9 @@ export default function DashboardPage() {
               variant="success"
             />
             <MiniStatCard
-              label="Completed"
-              value={data.kpis.completedToday}
-              icon={UserCheck}
+              label="In Progress"
+              value={data.kpis.inProgressToday}
+              icon={Activity}
               variant="info"
             />
             <MiniStatCard
@@ -272,7 +274,7 @@ export default function DashboardPage() {
 
             <Link
               href="/staff"
-              className="flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              className="flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-200"
             >
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className="p-2.5 bg-gradient-to-br from-green-500 to-green-400 rounded-lg flex-shrink-0">
@@ -280,6 +282,21 @@ export default function DashboardPage() {
                 </div>
                 <span className="font-semibold text-base text-gray-900">
                   Staff
+                </span>
+              </div>
+              <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+            </Link>
+
+            <Link
+              href="/customers"
+              className="flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+            >
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="p-2.5 bg-gradient-to-br from-blue-500 to-blue-400 rounded-lg flex-shrink-0">
+                  <Phone className="w-5 h-5 text-white" />
+                </div>
+                <span className="font-semibold text-base text-gray-900">
+                  Customers
                 </span>
               </div>
               <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
