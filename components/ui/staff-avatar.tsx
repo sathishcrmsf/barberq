@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 interface StaffAvatarProps {
   name: string;
   imageUrl?: string | null;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 }
 
@@ -22,7 +22,8 @@ export function StaffAvatar({ name, imageUrl, size = 'md', className }: StaffAva
   const sizeClasses = {
     sm: 'w-8 h-8 text-xs',
     md: 'w-10 h-10 text-sm',
-    lg: 'w-16 h-16 text-lg'
+    lg: 'w-16 h-16 text-lg',
+    xl: 'w-24 h-24 text-2xl'
   };
 
   return (
