@@ -45,6 +45,7 @@ export interface ServiceFormData {
   thumbnailUrl?: string;
   imageAlt?: string;
   staffIds?: string[]; // For staff assignments
+  isActive?: boolean;
 }
 
 export function useServices() {
