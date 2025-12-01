@@ -26,8 +26,8 @@ model Customer {
 // Walk-in customer queue
 model WalkIn {
   id           String    @id @default(cuid())
-  customerId   String    // Link to Customer
-  customer     Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId   String?   // Link to Customer (optional for migration compatibility)
+  customer     Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
   customerName String?   // Legacy field, kept for backward compatibility
   service      String    // Service name (denormalized)
   barberName   String?   // Legacy field
