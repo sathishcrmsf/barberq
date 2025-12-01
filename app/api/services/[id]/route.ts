@@ -12,6 +12,10 @@ const updateServiceSchema = z.object({
   price: z.number().min(0).max(9999.99).optional(),
   duration: z.number().int().min(5).max(480).optional(),
   description: z.string().max(500).optional().nullable(),
+  imageUrl: z.string().optional().nullable(),
+  thumbnailUrl: z.string().optional().nullable(),
+  imageAlt: z.string().max(200).optional().nullable(),
+  categoryId: z.string().optional().nullable(),
   isActive: z.boolean().optional()
 });
 
@@ -37,11 +41,13 @@ export async function PATCH(
     }
 
     // If name is being updated, check uniqueness (excluding self)
-    // Note: SQLite doesn't support mode: "insensitive", so this is case-sensitive
     if (validated.name && validated.name !== existingService.name) {
       const duplicateService = await prisma.service.findFirst({
         where: {
-          name: validated.name,
+          name: {
+            equals: validated.name,
+            mode: 'insensitive'
+          },
           id: { not: id }
         }
       });
@@ -57,7 +63,15 @@ export async function PATCH(
     // Update service
     const updatedService = await prisma.service.update({
       where: { id },
-      data: validated
+      data: validated,
+      include: {
+        category: true,
+        staffServices: {
+          include: {
+            staff: true
+          }
+        }
+      }
     });
 
     return NextResponse.json(updatedService, { status: 200 });

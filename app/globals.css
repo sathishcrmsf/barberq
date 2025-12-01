@@ -121,11 +121,26 @@
   }
 }
 
-/* Prevent horizontal scrolling */
+/* Prevent horizontal scrolling but allow vertical */
 html,
 body {
   max-width: 100%;
   overflow-x: hidden;
+  overflow-y: auto;
+  height: auto;
+  min-height: 100%;
+}
+
+/* Enable smooth scrolling on mobile */
+body {
+  -webkit-overflow-scrolling: touch; /* iOS momentum scrolling */
+  overscroll-behavior-y: none; /* Prevent pull-to-refresh bounce */
+  touch-action: pan-y; /* Allow vertical scrolling on touch devices */
+}
+
+/* Ensure all main content areas are touch-scrollable */
+main {
+  touch-action: pan-y;
 }
 
 /* Ensure text in form inputs doesn't get scaled down on mobile */

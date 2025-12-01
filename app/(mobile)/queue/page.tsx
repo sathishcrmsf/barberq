@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { QueueItem } from "@/components/ui/queue-item";
 import { Button } from "@/components/ui/button";
 import { CompletionPopup } from "@/components/ui/completion-popup";
-import { Plus, Settings } from "lucide-react";
+import { Plus, Settings, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 interface WalkIn {
@@ -38,6 +38,7 @@ export default function QueuePage() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [completionData, setCompletionData] = useState<CompletionData | null>(null);
   const [showCompletionPopup, setShowCompletionPopup] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
 
   const fetchWalkIns = async () => {
     try {
@@ -155,42 +156,95 @@ export default function QueuePage() {
         />
       )}
 
-      <div className="flex flex-col h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 pb-32">
         {/* Sticky Header */}
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-4 sm:py-5">
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-4 sm:py-5 shadow-sm">
         <div className="flex items-center justify-between">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push('/dashboard')}
+            aria-label="Back to dashboard"
+            className="mr-3"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
           <div className="flex-1 min-w-0">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Queue</h1>
             <p className="text-sm sm:text-base text-gray-600 mt-1">
               {walkIns.length} {walkIns.length === 1 ? "customer" : "customers"}
             </p>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.push("/services")}
-            aria-label="Manage services"
-          >
-            <Settings className="w-5 h-5" />
-          </Button>
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowMenu(!showMenu)}
+              aria-label="Menu"
+            >
+              <Settings className="w-5 h-5" />
+            </Button>
+            
+            {/* Quick Menu Dropdown */}
+            {showMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
+                <button
+                  onClick={() => {
+                    router.push('/services');
+                    setShowMenu(false);
+                  }}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b text-sm font-medium"
+                >
+                  ✂️ Services
+                </button>
+                <button
+                  onClick={() => {
+                    router.push('/categories');
+                    setShowMenu(false);
+                  }}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b text-sm font-medium"
+                >
+                  📂 Categories
+                </button>
+                <button
+                  onClick={() => {
+                    router.push('/staff');
+                    setShowMenu(false);
+                  }}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b text-sm font-medium"
+                >
+                  👥 Staff
+                </button>
+                <button
+                  onClick={() => {
+                    router.push('/analytics');
+                    setShowMenu(false);
+                  }}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 text-sm font-medium rounded-b-lg"
+                >
+                  📊 Analytics
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
       {/* Queue List */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="px-0">
         {loading ? (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center min-h-[50vh] px-4">
             <p className="text-base sm:text-lg text-gray-500">Loading...</p>
           </div>
         ) : walkIns.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full px-4 text-center">
+          <div className="flex flex-col items-center justify-center min-h-[50vh] px-4 text-center">
             <p className="text-base sm:text-lg text-gray-600 mb-2">No customers in queue</p>
             <p className="text-sm sm:text-base text-gray-500">
               Tap the button below to add a walk-in
             </p>
           </div>
         ) : (
-          <div className="pb-24">
+          <div className="pb-4">
             {/* Waiting Section */}
             {waitingCustomers.length > 0 && (
               <div className="mb-2">

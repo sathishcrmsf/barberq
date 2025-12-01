@@ -102,9 +102,9 @@ export default function AddPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-32">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-4 sm:py-5">
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-4 sm:py-5 shadow-sm">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -118,7 +118,7 @@ export default function AddPage() {
       </header>
 
       {/* Form */}
-      <main className="flex-1 overflow-y-auto p-4 sm:p-5">
+      <main className="p-4 sm:p-5 pb-8">
         <Card>
           <CardHeader>
             <CardTitle className="text-base sm:text-lg">Walk-In Details</CardTitle>

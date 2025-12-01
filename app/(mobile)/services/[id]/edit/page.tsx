@@ -8,11 +8,18 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
+interface Category {
+  id: string;
+  name: string;
+  isActive: boolean;
+}
+
 interface ServiceFormData {
   name: string;
   price: string;
   duration: string;
   description: string;
+  categoryId: string;
 }
 
 interface Service {
@@ -21,6 +28,7 @@ interface Service {
   price: number;
   duration: number;
   description?: string | null;
+  categoryId?: string | null;
   isActive: boolean;
 }
 
@@ -31,18 +39,28 @@ export default function EditServicePage({ params }: { params: Promise<{ id: stri
     name: "",
     price: "",
     duration: "",
-    description: ""
+    description: "",
+    categoryId: ""
   });
+  const [categories, setCategories] = useState<Category[]>([]);
   const [errors, setErrors] = useState<Partial<ServiceFormData>>({});
   const [loading, setLoading] = useState(false);
   const [loadingService, setLoadingService] = useState(true);
 
   useEffect(() => {
-    const fetchService = async () => {
+    const fetchData = async () => {
       try {
         const resolvedParams = await params;
         setServiceId(resolvedParams.id);
         
+        // Fetch categories
+        const categoriesResponse = await fetch("/api/categories");
+        if (categoriesResponse.ok) {
+          const categoriesData = await categoriesResponse.json();
+          setCategories(categoriesData.filter((cat: Category) => cat.isActive));
+        }
+        
+        // Fetch service
         const response = await fetch("/api/services");
         if (!response.ok) throw new Error("Failed to fetch services");
         const services: Service[] = await response.json();
@@ -58,7 +76,8 @@ export default function EditServicePage({ params }: { params: Promise<{ id: stri
           name: service.name,
           price: service.price.toString(),
           duration: service.duration.toString(),
-          description: service.description || ""
+          description: service.description || "",
+          categoryId: service.categoryId || ""
         });
       } catch (error) {
         toast.error("Failed to load service");
@@ -69,7 +88,7 @@ export default function EditServicePage({ params }: { params: Promise<{ id: stri
       }
     };
 
-    fetchService();
+    fetchData();
   }, [params, router]);
 
   const validateForm = (): boolean => {
@@ -119,7 +138,8 @@ export default function EditServicePage({ params }: { params: Promise<{ id: stri
         name: formData.name.trim(),
         price: parseFloat(formData.price),
         duration: parseInt(formData.duration),
-        description: formData.description.trim() || null
+        description: formData.description.trim() || null,
+        categoryId: formData.categoryId || null
       };
 
       const response = await fetch(`/api/services/${serviceId}`, {
@@ -147,16 +167,16 @@ export default function EditServicePage({ params }: { params: Promise<{ id: stri
 
   if (loadingService) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center min-h-screen">
         <p className="text-base sm:text-lg text-gray-500">Loading service...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-40">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-4 sm:py-5">
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-4 sm:py-5 shadow-sm">
         <div className="flex items-center justify-between gap-4">
           <button 
             onClick={() => router.back()} 
@@ -171,8 +191,8 @@ export default function EditServicePage({ params }: { params: Promise<{ id: stri
       </header>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="flex flex-col flex-1">
-        <main className="flex-1 overflow-y-auto p-4 sm:p-5">
+      <form onSubmit={handleSubmit} className="pb-20">
+        <main className="p-4 sm:p-5">
           {/* Name Field */}
           <div className="mb-4 sm:mb-5">
             <label htmlFor="name" className="block text-sm sm:text-base font-medium mb-2">
@@ -190,6 +210,33 @@ export default function EditServicePage({ params }: { params: Promise<{ id: stri
             {errors.name && (
               <p className="text-red-500 text-sm mt-1">{errors.name}</p>
             )}
+          </div>
+
+          {/* Category Field */}
+          <div className="mb-4 sm:mb-5">
+            <label htmlFor="category" className="block text-sm sm:text-base font-medium mb-2">
+              Category (optional)
+            </label>
+            <select
+              id="category"
+              value={formData.categoryId}
+              onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+              className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-base bg-white"
+            >
+              <option value="">-- No Category --</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-sm text-gray-500 mt-1">
+              {categories.length === 0 ? (
+                <span>No categories available. <button type="button" onClick={() => router.push('/categories/add')} className="text-blue-600 underline">Create one</button></span>
+              ) : (
+                <span>Organize this service into a category</span>
+              )}
+            </p>
           </div>
 
           {/* Price Field */}
@@ -260,7 +307,7 @@ export default function EditServicePage({ params }: { params: Promise<{ id: stri
         </main>
 
         {/* Footer */}
-        <footer className="p-4 sm:p-5 border-t bg-white">
+        <footer className="sticky bottom-0 p-4 sm:p-5 border-t bg-white shadow-lg">
           <Button
             type="submit"
             className="w-full"

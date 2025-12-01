@@ -250,3 +250,5 @@ All Select dropdowns in BarberQ now use the width fix. The dropdown will always 
 
 No further action required.
 
+
+

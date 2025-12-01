@@ -1,6 +1,6 @@
-// @cursor v1.2: This schema defines the Service model for centralized
-// service management. Service.name must be unique. No foreign key relationship
-// with WalkIn (denormalized for flexibility).
+// @cursor v1.3: Enhanced schema with Categories, Staff, and Staff-Service assignments.
+// This enables service organization, staff-skill matching, and analytics capabilities.
+// Service.name must be unique. WalkIn stores service name as string (denormalized).
 
 generator client {
   provider = "prisma-client-js"
@@ -11,25 +11,82 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Walk-in customer queue
 model WalkIn {
   id           String    @id @default(cuid())
   customerName String
-  service      String
-  barberName   String?
+  service      String    // Service name (denormalized)
+  barberName   String?   // Legacy field
+  staffId      String?   // v1.3: Link to Staff member
+  staff        Staff?    @relation(fields: [staffId], references: [id], onDelete: SetNull)
   status       String    @default("waiting")
   notes        String?
   createdAt    DateTime  @default(now())
   startedAt    DateTime?
 }
 
+// Service categories for organization
+model Category {
+  id           String    @id @default(cuid())
+  name         String    @unique
+  description  String?
+  icon         String?   // Lucide icon name
+  displayOrder Int       @default(0)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
+  services     Service[]
+}
+
+// Services catalog
 model Service {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  price       Float
-  duration    Int      // in minutes
-  description String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String         @id @default(cuid())
+  name         String         @unique
+  price        Float
+  duration     Int            // in minutes
+  description  String?
+  imageUrl     String?        // v1.3: Service image (base64 or URL)
+  thumbnailUrl String?        // v1.3: Thumbnail for list views
+  imageAlt     String?        // v1.3: Accessibility description
+  categoryId   String?        // v1.3: Optional category link
+  category     Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  
+  staffServices StaffService[]
+}
+
+// Staff members
+model Staff {
+  id           String         @id @default(cuid())
+  name         String
+  title        String?        // e.g., "Senior Barber", "Master Stylist"
+  email        String?
+  phone        String?
+  imageUrl     String?        // Staff photo
+  bio          String?
+  displayOrder Int            @default(0)
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  
+  staffServices StaffService[]
+  walkIns       WalkIn[]
+}
+
+// Staff-Service assignment (many-to-many)
+model StaffService {
+  id              String   @id @default(cuid())
+  staffId         String
+  staff           Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  serviceId       String
+  service         Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  isPrimary       Boolean  @default(false) // Indicates specialty
+  yearsExperience Int?
+  createdAt       DateTime @default(now())
+  
+  @@unique([staffId, serviceId]) // Prevent duplicate assignments
 }
 
