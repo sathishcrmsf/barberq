@@ -84,6 +84,97 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Clean typography and spacing
 - Monochrome palette with accent colors
 
+## [1.4.0] - 2025-12-01
+
+### Added
+- **Customer Management System**:
+  - New `Customer` model in database schema (phone-based identification)
+  - Customer management page (`/customers`) with segmentation
+  - Customer API endpoints (GET, POST, PATCH, DELETE)
+  - Customer segmentation: VIP (10+ visits), Regular (3-9 visits), New (1-2 visits), At-Risk (30+ days)
+  - Quick stats dashboard: Total Customers, Active Customers, Total LTV, Average Visits
+  - One-tap "Add to Queue" from customer list (pre-fills form)
+  - Direct phone call links from customer cards
+  - Real-time search by name or phone number
+  - Filter chips for segment-based filtering
+  - Visual customer cards with avatars, stats, and action buttons
+
+- **Enhanced Service Management**:
+  - Advanced search and filtering in service table
+  - Sort by name, price, duration, or creation date
+  - Status filter (All, Active, Inactive)
+  - Service count display (filtered vs total)
+  - Improved loading states with per-action indicators
+  - Enhanced error handling with rollback on failures
+
+- **Dashboard Improvements**:
+  - Enhanced dashboard analytics
+  - Better data visualization
+  - Improved performance metrics
+
+- **Walk-In Enhancements**:
+  - Customer relationship linking (WalkIn → Customer)
+  - Backward compatibility with legacy customerName field
+  - Customer lookup in add form via query parameters
+
+### Changed
+- **Database Schema**:
+  - Added `Customer` model with phone-based unique identification
+  - Updated `WalkIn` model to link to `Customer` via `customerId`
+  - Maintained backward compatibility with `customerName` field
+  - Cascade delete: Deleting customer removes associated walk-ins
+
+- **Add Customer Form**:
+  - Enhanced to support customer lookup via phone
+  - Pre-fill capability from customer list
+  - Query parameter support for quick add flow
+
+- **Queue Management**:
+  - Improved customer data display
+  - Better integration with customer records
+
+### Technical Details
+- Created: `app/(mobile)/customers/page.tsx` - Customer management interface
+- Created: `app/api/customers/route.ts` - Customer CRUD API
+- Created: `app/api/customers/[id]/route.ts` - Individual customer operations
+- Modified: `prisma/schema.prisma` - Added Customer model and relationships
+- Modified: `app/(mobile)/add/page.tsx` - Added customer lookup support
+- Modified: `app/(mobile)/queue/page.tsx` - Enhanced customer display
+- Modified: `components/admin/services/service-table.tsx` - Added search, filter, sort
+- Modified: `hooks/useServices.ts` - Enhanced with better error handling
+- Modified: `app/api/walkins/route.ts` - Customer relationship support
+- Modified: `app/api/walkins/[id]/route.ts` - Customer-aware updates
+- Added: `CUSTOMER_UX_REDESIGN_IMPLEMENTED.md` - Implementation documentation
+- Added: `TODAYS_CHANGES.md` - Development changelog
+- Added: `DAILY_SUMMARY_DEC_1_2025.md` - Daily summary
+
+### UI/UX Improvements
+- **Customer Page**:
+  - Gradient cards for each customer segment
+  - Visual hierarchy with color coding
+  - Touch-friendly action buttons (48px+)
+  - Responsive grid layouts
+  - Empty states with helpful guidance
+  - Loading skeleton states
+
+- **Service Table**:
+  - Advanced search with real-time filtering
+  - Collapsible filter panel
+  - Sort indicators (ascending/descending)
+  - Clear filters button
+  - Result count display
+
+### Database
+- **Migration Required**: New `Customer` table added
+- **Backward Compatibility**: Existing walk-ins maintain `customerName` field
+- **Data Migration**: Existing walk-ins can be linked to customers via phone matching
+
+### Migration Guide
+1. Run database migration: `npx prisma migrate dev`
+2. Generate Prisma client: `npx prisma generate`
+3. Optionally migrate existing walk-ins to customer records
+4. Deploy updated schema
+
 ## [1.3.0] - 2025-12-01
 
 ### Added
@@ -167,6 +258,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Next.js | React | Node.js | Database |
 |---------|---------|-------|---------|----------|
+| 1.4.0   | 16.0.3  | 19    | 18+     | PostgreSQL |
+| 1.3.0   | 16.0.3  | 19    | 18+     | PostgreSQL |
 | 1.1.0   | 16.0.3  | 19    | 18+     | SQLite/PostgreSQL |
 | 1.0.0   | 16.0.3  | 19    | 18+     | SQLite/PostgreSQL |
 
@@ -205,7 +298,7 @@ For questions, issues, or feature requests:
 ---
 
 **Maintained by:** BarberQ Development Team  
-**Last Updated:** November 24, 2025
+**Last Updated:** December 1, 2025
 
 
 
