@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npx prisma generate && npx prisma migrate resolve --rolled-back 20251125050237_add_barber_and_started_at || true && npx prisma migrate resolve --rolled-back 20251125120000_init_postgresql || true && npx prisma migrate deploy || npx prisma db push --accept-data-loss --skip-generate && next build",
+  "buildCommand": "bash scripts/build.sh",
   "installCommand": "npm install"
 }
 
