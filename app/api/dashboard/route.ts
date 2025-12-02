@@ -55,22 +55,45 @@ export async function GET(request: Request) {
     // "today" is already set above
 
     // Fetch all necessary data in parallel
-    let walkIns, services, staff;
+    let walkIns: Awaited<ReturnType<typeof prisma.walkIn.findMany>> = [];
+    let services: Awaited<ReturnType<typeof prisma.service.findMany>> = [];
+    let staff: Awaited<ReturnType<typeof prisma.staff.findMany>> = [];
+    
     try {
-      [walkIns, services, staff] = await Promise.all([
+      const results = await Promise.all([
         prisma.walkIn.findMany({
           orderBy: { createdAt: "asc" },
+          include: {
+            customer: true,
+          },
+        }).catch((err) => {
+          console.error("Error fetching walkIns:", err);
+          return [];
         }),
         prisma.service.findMany({
           where: { isActive: true },
+        }).catch((err) => {
+          console.error("Error fetching services:", err);
+          return [];
         }),
         prisma.staff.findMany({
           where: { isActive: true },
+        }).catch((err) => {
+          console.error("Error fetching staff:", err);
+          return [];
         }),
       ]);
+      
+      walkIns = results[0] || [];
+      services = results[1] || [];
+      staff = results[2] || [];
     } catch (dbError) {
       console.error("Database query error:", dbError);
-      throw new Error(`Database connection failed: ${dbError instanceof Error ? dbError.message : "Unknown database error"}`);
+      console.error("Error stack:", dbError instanceof Error ? dbError.stack : "No stack");
+      // Return empty arrays instead of throwing to allow partial data
+      walkIns = [];
+      services = [];
+      staff = [];
     }
 
     // Apply filters
@@ -329,19 +352,26 @@ export async function GET(request: Request) {
     }> = [];
 
     try {
-      const topSmartInsights = await getTopInsights(5);
+      // Add timeout to prevent hanging
+      const insightsPromise = getTopInsights(5);
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error("Insights timeout after 5 seconds")), 5000)
+      );
+      
+      const topSmartInsights = await Promise.race([insightsPromise, timeoutPromise]);
       smartInsights = topSmartInsights.map((insight) => ({
-        id: insight.id,
-        emoji: insight.emoji,
-        title: insight.title,
-        value: insight.value.toString(),
-        priority: insight.priority,
+        id: insight.id || `insight-${Date.now()}`,
+        emoji: insight.emoji || "ℹ️",
+        title: insight.title || "Insight",
+        value: insight.value?.toString() || "N/A",
+        priority: insight.priority || 5,
       }));
     } catch (error) {
       console.error("Error fetching smart insights:", error);
       console.error("Error details:", error instanceof Error ? error.message : String(error));
       console.error("Stack trace:", error instanceof Error ? error.stack : "No stack trace");
-      // Continue without smart insights if there's an error
+      // Continue without smart insights if there's an error - this is not critical
+      smartInsights = [];
     }
 
     // Merge insights: prioritize existing real-time insights, then add smart insights
