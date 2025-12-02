@@ -8,6 +8,22 @@ import { getTopInsights } from "@/lib/insights";
 
 export async function GET(request: Request) {
   try {
+    // Check database connection first
+    try {
+      await prisma.$connect();
+    } catch (dbError) {
+      console.error("Database connection failed:", dbError);
+      return NextResponse.json(
+        { 
+          error: "Database connection failed. Please check your DATABASE_URL environment variable.",
+          details: process.env.NODE_ENV === "development" 
+            ? (dbError instanceof Error ? dbError.message : String(dbError))
+            : undefined
+        },
+        { status: 500 }
+      );
+    }
+
     // Parse query parameters for filters
     const { searchParams } = new URL(request.url);
     let dateRange = searchParams.get("dateRange") || "today";
@@ -58,7 +74,10 @@ export async function GET(request: Request) {
     }
 
     // Apply filters
-    let filteredWalkIns = walkIns.filter((w) => w.createdAt >= startDate);
+    let filteredWalkIns = walkIns.filter((w) => {
+      if (!w.createdAt) return false;
+      return w.createdAt >= startDate;
+    });
     if (staffId) {
       filteredWalkIns = filteredWalkIns.filter((w) => w.staffId === staffId);
     }
@@ -69,7 +88,10 @@ export async function GET(request: Request) {
     // Calculate KPIs based on filtered data
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
-    const todayWalkIns = filteredWalkIns.filter((w) => w.createdAt >= todayStart);
+    const todayWalkIns = filteredWalkIns.filter((w) => {
+      if (!w.createdAt) return false;
+      return w.createdAt >= todayStart;
+    });
     const completedToday = todayWalkIns.filter((w) => w.status === "done");
     const inProgressToday = filteredWalkIns.filter((w) => w.status === "in-progress");
     const waitingWalkIns = filteredWalkIns.filter((w) => w.status === "waiting");
@@ -79,8 +101,9 @@ export async function GET(request: Request) {
       waitingWalkIns.length > 0
         ? Math.round(
             waitingWalkIns.reduce((sum, w) => {
+              if (!w.createdAt) return sum;
               const waitMinutes = (Date.now() - w.createdAt.getTime()) / 60000;
-              return sum + waitMinutes;
+              return sum + (waitMinutes > 0 ? waitMinutes : 0);
             }, 0) / waitingWalkIns.length
           )
         : 0;
@@ -88,10 +111,11 @@ export async function GET(request: Request) {
     // Calculate staff active (staff currently working on a walk-in)
     const staffActive = staff.filter((s) =>
       walkIns.some((w) => w.staffId === s.id && w.status === "in-progress")
-    ).length;
+    ).length || 0;
 
     // Calculate total revenue today
     const revenueToday = completedToday.reduce((sum, w) => {
+      if (!w.service) return sum;
       const service = services.find((s) => s.name === w.service);
       return sum + (service?.price || 0);
     }, 0);
@@ -120,6 +144,7 @@ export async function GET(request: Request) {
     const currentHour = new Date().getHours();
     const hourlyBookings = walkIns.reduce(
       (acc, w) => {
+        if (!w.createdAt) return acc;
         const hour = w.createdAt.getHours();
         acc[hour] = (acc[hour] || 0) + 1;
         return acc;
@@ -170,6 +195,7 @@ export async function GET(request: Request) {
           w.completedAt <= yesterdayEnd
       )
       .reduce((sum, w) => {
+        if (!w.service) return sum;
         const service = services.find((s) => s.name === w.service);
         return sum + (service?.price || 0);
       }, 0);
@@ -198,6 +224,7 @@ export async function GET(request: Request) {
     // Insight 4: Top service today
     const serviceCounts = todayWalkIns.reduce(
       (acc, w) => {
+        if (!w.service) return acc;
         acc[w.service] = (acc[w.service] || 0) + 1;
         return acc;
       },
@@ -222,15 +249,17 @@ export async function GET(request: Request) {
     const staffPerformance = staff
       .map((s) => {
         const staffCompleted = completedToday.filter((w) => w.staffId === s.id);
-        const avgCompletionTime = staffCompleted
-          .filter((w) => w.startedAt && w.completedAt)
-          .reduce((sum, w) => {
-            if (w.startedAt && w.completedAt) {
-              const duration = (w.completedAt.getTime() - w.startedAt.getTime()) / 60000;
-              return sum + duration;
-            }
-            return sum;
-          }, 0) / (staffCompleted.length || 1);
+        const avgCompletionTime = staffCompleted.length > 0
+          ? staffCompleted
+              .filter((w) => w.startedAt && w.completedAt)
+              .reduce((sum, w) => {
+                if (w.startedAt && w.completedAt) {
+                  const duration = (w.completedAt.getTime() - w.startedAt.getTime()) / 60000;
+                  return sum + (duration > 0 ? duration : 0);
+                }
+                return sum;
+              }, 0) / (staffCompleted.filter((w) => w.startedAt && w.completedAt).length || 1)
+          : 0;
 
         return {
           name: s.name,
@@ -325,16 +354,16 @@ export async function GET(request: Request) {
     const nextWaitingWalkIn = waitingWalkIns[0];
 
     const queueStatus = {
-      nowServing: inProgressWalkIn
+      nowServing: inProgressWalkIn && inProgressWalkIn.customerName
         ? {
-            customerName: inProgressWalkIn.customerName,
-            service: inProgressWalkIn.service,
+            customerName: inProgressWalkIn.customerName || "Unknown",
+            service: inProgressWalkIn.service || "Unknown",
           }
         : undefined,
-      nextUp: nextWaitingWalkIn
+      nextUp: nextWaitingWalkIn && nextWaitingWalkIn.customerName
         ? {
-            customerName: nextWaitingWalkIn.customerName,
-            service: nextWaitingWalkIn.service,
+            customerName: nextWaitingWalkIn.customerName || "Unknown",
+            service: nextWaitingWalkIn.service || "Unknown",
           }
         : undefined,
       estimatedWait: avgWaitTime,
