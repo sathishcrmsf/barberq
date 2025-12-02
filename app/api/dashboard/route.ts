@@ -10,7 +10,19 @@ export async function GET(request: Request) {
   try {
     // Parse query parameters for filters
     const { searchParams } = new URL(request.url);
-    const dateRange = searchParams.get("dateRange") || "today";
+    let dateRange = searchParams.get("dateRange") || "today";
+    
+    // Validate and sanitize dateRange parameter
+    // Handle cases like "today:1" by extracting just the base value
+    if (dateRange.includes(":")) {
+      dateRange = dateRange.split(":")[0];
+    }
+    
+    // Ensure dateRange is one of the valid values
+    if (!["today", "week", "month"].includes(dateRange)) {
+      dateRange = "today";
+    }
+    
     const staffId = searchParams.get("staffId");
     const serviceName = searchParams.get("serviceName");
 
@@ -27,17 +39,23 @@ export async function GET(request: Request) {
     // "today" is already set above
 
     // Fetch all necessary data in parallel
-    const [walkIns, services, staff] = await Promise.all([
-      prisma.walkIn.findMany({
-        orderBy: { createdAt: "asc" },
-      }),
-      prisma.service.findMany({
-        where: { isActive: true },
-      }),
-      prisma.staff.findMany({
-        where: { isActive: true },
-      }),
-    ]);
+    let walkIns, services, staff;
+    try {
+      [walkIns, services, staff] = await Promise.all([
+        prisma.walkIn.findMany({
+          orderBy: { createdAt: "asc" },
+        }),
+        prisma.service.findMany({
+          where: { isActive: true },
+        }),
+        prisma.staff.findMany({
+          where: { isActive: true },
+        }),
+      ]);
+    } catch (dbError) {
+      console.error("Database query error:", dbError);
+      throw new Error(`Database connection failed: ${dbError instanceof Error ? dbError.message : "Unknown database error"}`);
+    }
 
     // Apply filters
     let filteredWalkIns = walkIns.filter((w) => w.createdAt >= startDate);
@@ -292,6 +310,8 @@ export async function GET(request: Request) {
       }));
     } catch (error) {
       console.error("Error fetching smart insights:", error);
+      console.error("Error details:", error instanceof Error ? error.message : String(error));
+      console.error("Stack trace:", error instanceof Error ? error.stack : "No stack trace");
       // Continue without smart insights if there's an error
     }
 
@@ -340,8 +360,21 @@ export async function GET(request: Request) {
     );
   } catch (error) {
     console.error("Error fetching dashboard data:", error);
+    console.error("Error details:", error instanceof Error ? error.message : String(error));
+    console.error("Stack trace:", error instanceof Error ? error.stack : "No stack trace");
+    
+    // Return more detailed error in development, generic in production
+    const errorMessage = process.env.NODE_ENV === "development" 
+      ? (error instanceof Error ? error.message : "Unknown error")
+      : "Failed to fetch dashboard data";
+    
     return NextResponse.json(
-      { error: "Failed to fetch dashboard data" },
+      { 
+        error: errorMessage,
+        ...(process.env.NODE_ENV === "development" && {
+          stack: error instanceof Error ? error.stack : undefined
+        })
+      },
       { status: 500 }
     );
   }
