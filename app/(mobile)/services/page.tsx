@@ -7,12 +7,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useServices, Service } from '@/hooks/useServices';
 import { AddServiceDrawer } from '@/components/admin/services/add-service-drawer';
+import { EditServiceDrawer } from '@/components/admin/services/edit-service-drawer';
 import { ServiceTable } from '@/components/admin/services/service-table';
 import { EmptyState } from '@/components/shared/empty-state';
 import { SkeletonTable } from '@/components/shared/skeleton';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Scissors, Plus, TrendingUp, DollarSign, Clock } from 'lucide-react';
+import { Scissors, Plus, TrendingUp, Tag } from 'lucide-react';
 
 export default function ServicesPageNew() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function ServicesPageNew() {
   } = useServices();
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
 
   const handleCreate = () => {
@@ -36,8 +38,8 @@ export default function ServicesPageNew() {
   };
 
   const handleEdit = (service: Service) => {
-    // For now, redirect to edit page. Could be replaced with drawer later
-    router.push(`/services/${service.id}/edit`);
+    setEditingService(service);
+    setIsEditDrawerOpen(true);
   };
 
   const handleDuplicate = async (service: Service) => {
@@ -54,32 +56,51 @@ export default function ServicesPageNew() {
 
   // Calculate stats
   const totalRevenue = services.reduce((sum, s) => sum + s.price, 0);
-  const avgDuration = services.length > 0
-    ? services.reduce((sum, s) => sum + s.duration, 0) / services.length
-    : 0;
+  const servicesWithCategories = services.filter(s => s.category !== null);
+  const uniqueCategoriesCount = new Set(servicesWithCategories.map(s => s.category?.id)).size;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-32">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white border-b shadow-sm">
-        <div className="flex items-center justify-between px-4 py-4">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => router.back()}>
-              ← Back
-            </Button>
-            <div>
-              <h1 className="text-xl font-bold">Services</h1>
-              <p className="text-sm text-gray-600">
-                Manage your service catalog
-              </p>
+      <header className="sticky top-0 z-20 bg-white border-b shadow-sm">
+        <div className="px-4 py-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="sm" onClick={() => router.back()}>
+                ← Back
+              </Button>
+              <div>
+                <h1 className="text-xl font-bold">Services</h1>
+                <p className="text-sm text-gray-600">
+                  Manage your service catalog
+                </p>
+              </div>
             </div>
+            <Button size="sm" onClick={handleCreate}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Service
+            </Button>
           </div>
-          <Button size="sm" onClick={handleCreate}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Service
-          </Button>
+          
+          {/* Compact Stats Row */}
+          {!loading && services.length > 0 && (
+            <div className="flex items-center gap-4 text-sm text-gray-600 pt-2 border-t">
+              <div className="flex items-center gap-1.5">
+                <Scissors className="w-4 h-4 text-gray-400" />
+                <span className="font-medium text-gray-900">{services.length}</span>
+                <span>services</span>
+              </div>
+              {uniqueCategoriesCount > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <Tag className="w-4 h-4 text-gray-400" />
+                  <span className="font-medium text-gray-900">{uniqueCategoriesCount}</span>
+                  <span>categories</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      </div>
+      </header>
 
       {/* Content */}
       <div className="p-4 pb-24">
@@ -95,47 +116,6 @@ export default function ServicesPageNew() {
           />
         ) : (
           <>
-            {/* Stats Overview */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-              <Card className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-                    <Scissors className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Total Services</p>
-                    <p className="text-2xl font-bold">{services.length}</p>
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
-                    <DollarSign className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Avg Price</p>
-                    <p className="text-2xl font-bold">
-                      ${services.length > 0 ? (totalRevenue / services.length).toFixed(2) : '0.00'}
-                    </p>
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Avg Duration</p>
-                    <p className="text-2xl font-bold">{Math.round(avgDuration)} min</p>
-                  </div>
-                </div>
-              </Card>
-            </div>
-
             {/* Service Table */}
             <ServiceTable
               services={services}
@@ -172,6 +152,19 @@ export default function ServicesPageNew() {
       <AddServiceDrawer
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
+        onSuccess={() => {
+          // Drawer will auto-refresh via the hook
+        }}
+      />
+
+      {/* Edit Service Drawer */}
+      <EditServiceDrawer
+        isOpen={isEditDrawerOpen}
+        onClose={() => {
+          setIsEditDrawerOpen(false);
+          setEditingService(null);
+        }}
+        service={editingService}
         onSuccess={() => {
           // Drawer will auto-refresh via the hook
         }}

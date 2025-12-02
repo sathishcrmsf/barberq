@@ -21,7 +21,6 @@ import {
   DollarSign,
   Users,
   Search,
-  Filter,
   X,
   ArrowUpDown,
   Loader2
@@ -54,9 +53,23 @@ export function ServiceTable({
 }: ServiceTableProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-  const [showFilters, setShowFilters] = useState(false);
+
+  // Extract unique categories from services
+  const uniqueCategories = useMemo(() => {
+    const categoriesMap = new Map<string, { id: string; name: string }>();
+    services.forEach(service => {
+      if (service.category) {
+        categoriesMap.set(service.category.id, {
+          id: service.category.id,
+          name: service.category.name
+        });
+      }
+    });
+    return Array.from(categoriesMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [services]);
 
   // Filter and sort services
   const filteredAndSortedServices = useMemo(() => {
@@ -76,6 +89,13 @@ export function ServiceTable({
     if (statusFilter !== 'all') {
       filtered = filtered.filter(service =>
         statusFilter === 'active' ? service.isActive : !service.isActive
+      );
+    }
+
+    // Category filter
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter(service =>
+        service.category?.id === categoryFilter
       );
     }
 
@@ -111,7 +131,7 @@ export function ServiceTable({
     });
 
     return filtered;
-  }, [services, searchQuery, statusFilter, sortField, sortDirection]);
+  }, [services, searchQuery, statusFilter, categoryFilter, sortField, sortDirection]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -125,11 +145,12 @@ export function ServiceTable({
   const clearFilters = () => {
     setSearchQuery('');
     setStatusFilter('all');
+    setCategoryFilter('all');
     setSortField('name');
     setSortDirection('asc');
   };
 
-  const hasActiveFilters = searchQuery.trim() !== '' || statusFilter !== 'all';
+  const hasActiveFilters = searchQuery.trim() !== '' || statusFilter !== 'all' || categoryFilter !== 'all';
 
   if (loading) {
     return (
@@ -163,7 +184,7 @@ export function ServiceTable({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
               type="text"
-              placeholder="Search services by name, description, or category..."
+              placeholder="Search services..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -172,75 +193,62 @@ export function ServiceTable({
           </div>
 
           {/* Filter Controls */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              variant={showFilters ? "default" : "outline"}
-              size="sm"
-              onClick={() => setShowFilters(!showFilters)}
-              className="gap-2"
-            >
-              <Filter className="w-4 h-4" />
-              Filters
-            </Button>
-
-            {showFilters && (
-              <div className="flex items-center gap-2 flex-wrap">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as FilterStatus)}
-                  className="px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  aria-label="Filter by status"
-                >
-                  <option value="all">All Status</option>
-                  <option value="active">Active Only</option>
-                  <option value="inactive">Inactive Only</option>
-                </select>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSort.bind(null, 'name')}
-                  className="gap-2"
-                  aria-label="Sort by name"
-                >
-                  <ArrowUpDown className="w-4 h-4" />
-                  Name
-                  {sortField === 'name' && (
-                    <span className="text-xs">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                  )}
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSort.bind(null, 'price')}
-                  className="gap-2"
-                  aria-label="Sort by price"
-                >
-                  <ArrowUpDown className="w-4 h-4" />
-                  Price
-                  {sortField === 'price' && (
-                    <span className="text-xs">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                  )}
-                </Button>
-              </div>
-            )}
-
-            {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearFilters}
-                className="gap-2 text-gray-600"
-                aria-label="Clear all filters"
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as FilterStatus)}
+                className="px-3 py-1.5 text-sm border rounded-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <X className="w-4 h-4" />
-                Clear
-              </Button>
-            )}
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
 
-            <div className="ml-auto text-sm text-gray-600">
-              {filteredAndSortedServices.length} of {services.length} services
+              {uniqueCategories.length > 0 && (
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="px-3 py-1.5 text-sm border rounded-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">All Categories</option>
+                  {uniqueCategories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              <select
+                value={`${sortField}|${sortDirection}`}
+                onChange={(e) => {
+                  const [field, direction] = e.target.value.split('|');
+                  setSortField(field as SortField);
+                  setSortDirection(direction as SortDirection);
+                }}
+                className="px-3 py-1.5 text-sm border rounded-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="name|asc">Name ↑</option>
+                <option value="name|desc">Name ↓</option>
+                <option value="price|asc">Price ↑</option>
+                <option value="price|desc">Price ↓</option>
+              </select>
+
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="h-8 px-2 text-xs text-gray-500 hover:text-gray-700 rounded-full"
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+
+            <div className="text-sm text-gray-500">
+              {filteredAndSortedServices.length} of {services.length}
             </div>
           </div>
         </div>
@@ -273,51 +281,69 @@ export function ServiceTable({
                 <div className="flex flex-col sm:flex-row items-start justify-between gap-4 sm:gap-6">
                   {/* Service Info */}
                   <div className="flex-1 min-w-0 w-full sm:w-auto">
-                    <div className="flex items-center gap-3 mb-3 flex-wrap">
-                      <h3 className="font-semibold text-lg truncate">
-                        {service.name}
-                      </h3>
-                      <span
-                        className={cn(
-                          'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium shrink-0',
-                          service.isActive 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-gray-100 text-gray-600'
+                    {/* Header Row: Name, Badge, and Toggle */}
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2.5 mb-2 flex-wrap">
+                          <h3 className="font-semibold text-lg text-gray-900">
+                            {service.name}
+                          </h3>
+                          <span
+                            className={cn(
+                              'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0',
+                              service.isActive 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-gray-100 text-gray-600'
+                            )}
+                          >
+                            {service.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                        
+                        {/* Category */}
+                        {service.category && (
+                          <div className="mb-2">
+                            <CategoryBadge 
+                              name={service.category.name}
+                            />
+                          </div>
                         )}
-                      >
-                        {service.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
-
-                    {/* Category */}
-                    {service.category && (
-                      <div className="mb-3">
-                        <CategoryBadge 
-                          name={service.category.name}
-                        />
                       </div>
-                    )}
+                      
+                      {/* Toggle Switch - Top Right */}
+                      <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                        <Toggle
+                          checked={service.isActive}
+                          onChange={() => onToggleStatus(service.id, service.isActive)}
+                          disabled={isToggling}
+                          aria-label={`Toggle ${service.name} status`}
+                        />
+                        {isToggling && (
+                          <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                        )}
+                      </div>
+                    </div>
 
                     {/* Description */}
                     {service.description && (
-                      <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">
                         {service.description}
                       </p>
                     )}
 
                     {/* Metadata Row */}
-                    <div className="flex flex-wrap items-center gap-5 text-sm text-gray-700">
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
                       <div className="flex items-center gap-1.5">
-                        <DollarSign className="w-4 h-4" />
-                        <span className="font-medium">${service.price.toFixed(2)}</span>
+                        <DollarSign className="w-4 h-4 text-gray-400" />
+                        <span className="font-medium text-gray-900">${service.price.toFixed(2)}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <Clock className="w-4 h-4" />
+                        <Clock className="w-4 h-4 text-gray-400" />
                         <span>{service.duration} min</span>
                       </div>
                       {service._count && service._count.staffServices > 0 && (
                         <div className="flex items-center gap-1.5">
-                          <Users className="w-4 h-4" />
+                          <Users className="w-4 h-4 text-gray-400" />
                           <span>{service._count.staffServices} staff</span>
                         </div>
                       )}
@@ -330,61 +356,44 @@ export function ServiceTable({
                       variant="ghost"
                       size="sm"
                       onClick={() => onEdit(service)}
-                      className="flex-1 sm:flex-none sm:w-full justify-start hover:bg-gray-100"
+                      className="flex-1 sm:flex-none sm:w-full justify-center sm:justify-start hover:bg-gray-100 min-w-0"
                       disabled={serviceLoading}
                       aria-label={`Edit ${service.name}`}
                     >
-                      <Edit2 className="w-4 h-4 mr-2.5" />
-                      Edit
+                      <Edit2 className="w-4 h-4 sm:mr-2.5 shrink-0" />
+                      <span className="hidden sm:inline">Edit</span>
                     </Button>
 
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => onDuplicate(service)}
-                      className="flex-1 sm:flex-none sm:w-full justify-start hover:bg-gray-100"
+                      className="flex-1 sm:flex-none sm:w-full justify-center sm:justify-start hover:bg-gray-100 min-w-0"
                       disabled={serviceLoading}
                       aria-label={`Duplicate ${service.name}`}
                     >
                       {actionLoading[`duplicate-${service.id}`] ? (
-                        <Loader2 className="w-4 h-4 mr-2.5 animate-spin" />
+                        <Loader2 className="w-4 h-4 sm:mr-2.5 animate-spin shrink-0" />
                       ) : (
-                        <Copy className="w-4 h-4 mr-2.5" />
+                        <Copy className="w-4 h-4 sm:mr-2.5 shrink-0" />
                       )}
-                      Duplicate
+                      <span className="hidden sm:inline">Duplicate</span>
                     </Button>
-
-                    {/* Toggle Switch */}
-                    <div className="flex items-center gap-3 px-2 py-1 flex-1 sm:flex-none sm:w-full">
-                      <Toggle
-                        checked={service.isActive}
-                        onChange={() => onToggleStatus(service.id, service.isActive)}
-                        disabled={isToggling}
-                        aria-label={`Toggle ${service.name} status`}
-                      />
-                      <span className="text-sm font-medium text-gray-700">
-                        {isToggling ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          service.isActive ? 'Active' : 'Inactive'
-                        )}
-                      </span>
-                    </div>
 
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => onDelete(service.id, service.name)}
-                      className="flex-1 sm:flex-none sm:w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 font-medium"
+                      className="flex-1 sm:flex-none sm:w-full justify-center sm:justify-start text-red-600 hover:text-red-700 hover:bg-red-50 font-medium min-w-0"
                       disabled={isDeleting}
                       aria-label={`Delete ${service.name}`}
                     >
                       {isDeleting ? (
-                        <Loader2 className="w-4 h-4 mr-2.5 animate-spin" />
+                        <Loader2 className="w-4 h-4 sm:mr-2.5 animate-spin shrink-0" />
                       ) : (
-                        <Trash2 className="w-4 h-4 mr-2.5" />
+                        <Trash2 className="w-4 h-4 sm:mr-2.5 shrink-0" />
                       )}
-                      Delete
+                      <span className="hidden sm:inline">Delete</span>
                     </Button>
                   </div>
                 </div>

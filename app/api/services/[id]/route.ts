@@ -16,7 +16,8 @@ const updateServiceSchema = z.object({
   thumbnailUrl: z.string().optional().nullable(),
   imageAlt: z.string().max(200).optional().nullable(),
   categoryId: z.string().optional().nullable(),
-  isActive: z.boolean().optional()
+  isActive: z.boolean().optional(),
+  staffIds: z.array(z.string()).optional(), // Staff assignments
 });
 
 export async function PATCH(
@@ -60,10 +61,13 @@ export async function PATCH(
       }
     }
 
+    // Extract staffIds if provided
+    const { staffIds, ...serviceData } = validated;
+
     // Update service
     const updatedService = await prisma.service.update({
       where: { id },
-      data: validated,
+      data: serviceData,
       include: {
         category: true,
         staffServices: {
@@ -74,7 +78,39 @@ export async function PATCH(
       }
     });
 
-    return NextResponse.json(updatedService, { status: 200 });
+    // Update staff assignments if provided
+    if (staffIds !== undefined) {
+      // Delete existing staff assignments
+      await prisma.staffService.deleteMany({
+        where: { serviceId: id }
+      });
+
+      // Create new staff assignments
+      if (staffIds.length > 0) {
+        await prisma.staffService.createMany({
+          data: staffIds.map((staffId) => ({
+            serviceId: id,
+            staffId,
+            isPrimary: false,
+          })),
+        });
+      }
+    }
+
+    // Fetch the complete service with updated staff assignments
+    const completeService = await prisma.service.findUnique({
+      where: { id },
+      include: {
+        category: true,
+        staffServices: {
+          include: {
+            staff: true
+          }
+        }
+      }
+    });
+
+    return NextResponse.json(completeService, { status: 200 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

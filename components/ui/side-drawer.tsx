@@ -17,6 +17,7 @@ import {
   Settings,
   HelpCircle,
   LogOut,
+  Brain,
 } from "lucide-react";
 
 interface SideDrawerProps {
@@ -52,6 +53,7 @@ export function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
       items: [
         { icon: Clock, label: "Hours & Pricing", href: "/hours" },
         { icon: DollarSign, label: "Revenue Reports", href: "/analytics" },
+        { icon: Brain, label: "Smart Insights", href: "/insights" },
       ],
     },
     {

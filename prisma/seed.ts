@@ -1,12 +1,34 @@
-// @cursor: Seed script to populate demo data for BarberQ MVP
-// Creates realistic test data: Categories, Services, Staff, and WalkIns
+// @cursor: Comprehensive seed script for testing all insights
+// Generates data for: churn risk, no-shows, upsells, revenue trends, staff performance, repeat visits, slot optimization
 
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
+// Helper to get random element from array
+function randomElement<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)]
+}
+
+// Helper to get random number in range
+function randomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
+// Helper to add days to date
+function addDays(date: Date, days: number): Date {
+  const result = new Date(date)
+  result.setDate(result.getDate() + days)
+  return result
+}
+
+// Helper to get random date in range
+function randomDate(start: Date, end: Date): Date {
+  return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()))
+}
+
 async function main() {
-  console.log('🌱 Starting seed...')
+  console.log('🌱 Starting comprehensive seed for insights testing...')
 
   // Clear existing data
   console.log('🧹 Cleaning existing data...')
@@ -58,26 +80,16 @@ async function main() {
     }),
   ])
 
-  // 2. Create Services
+  // 2. Create Services (mix of basic and premium for upsell detection)
   console.log('✂️ Creating services...')
   const services = await Promise.all([
-    // Haircuts
+    // Basic services (lower price)
     prisma.service.create({
       data: {
         name: 'Classic Haircut',
-        price: 35,
+        price: 30,
         duration: 30,
-        description: 'Traditional haircut with clippers and scissors',
-        categoryId: categories[0].id,
-        isActive: true,
-      },
-    }),
-    prisma.service.create({
-      data: {
-        name: 'Premium Fade',
-        price: 45,
-        duration: 45,
-        description: 'High-quality fade with detailed styling',
+        description: 'Traditional haircut',
         categoryId: categories[0].id,
         isActive: true,
       },
@@ -85,40 +97,50 @@ async function main() {
     prisma.service.create({
       data: {
         name: 'Buzz Cut',
-        price: 25,
+        price: 20,
         duration: 20,
-        description: 'Quick and clean buzz cut',
+        description: 'Quick buzz cut',
         categoryId: categories[0].id,
         isActive: true,
       },
     }),
-    prisma.service.create({
-      data: {
-        name: 'Kids Haircut',
-        price: 28,
-        duration: 25,
-        description: 'Haircut for children under 12',
-        categoryId: categories[0].id,
-        isActive: true,
-      },
-    }),
-    // Beard & Shave
     prisma.service.create({
       data: {
         name: 'Beard Trim',
-        price: 20,
+        price: 18,
         duration: 20,
-        description: 'Professional beard shaping and trimming',
+        description: 'Beard shaping',
         categoryId: categories[1].id,
         isActive: true,
       },
     }),
     prisma.service.create({
       data: {
+        name: 'Kids Haircut',
+        price: 25,
+        duration: 25,
+        description: 'Haircut for children',
+        categoryId: categories[0].id,
+        isActive: true,
+      },
+    }),
+    // Premium services (higher price)
+    prisma.service.create({
+      data: {
+        name: 'Premium Fade',
+        price: 50,
+        duration: 45,
+        description: 'High-quality fade',
+        categoryId: categories[0].id,
+        isActive: true,
+      },
+    }),
+    prisma.service.create({
+      data: {
         name: 'Hot Towel Shave',
-        price: 40,
+        price: 45,
         duration: 35,
-        description: 'Luxury straight razor shave with hot towels',
+        description: 'Luxury shave',
         categoryId: categories[1].id,
         isActive: true,
       },
@@ -128,18 +150,17 @@ async function main() {
         name: 'Beard & Haircut Combo',
         price: 55,
         duration: 50,
-        description: 'Complete haircut and beard grooming',
+        description: 'Complete grooming',
         categoryId: categories[1].id,
         isActive: true,
       },
     }),
-    // Hair Treatments
     prisma.service.create({
       data: {
         name: 'Hair Coloring',
-        price: 80,
+        price: 85,
         duration: 90,
-        description: 'Professional hair coloring service',
+        description: 'Professional coloring',
         categoryId: categories[2].id,
         isActive: true,
       },
@@ -147,20 +168,19 @@ async function main() {
     prisma.service.create({
       data: {
         name: 'Scalp Treatment',
-        price: 50,
+        price: 60,
         duration: 40,
-        description: 'Deep cleansing scalp massage and treatment',
+        description: 'Deep scalp treatment',
         categoryId: categories[2].id,
         isActive: true,
       },
     }),
-    // Styling
     prisma.service.create({
       data: {
         name: 'Hair Styling',
-        price: 35,
+        price: 40,
         duration: 30,
-        description: 'Professional styling for events',
+        description: 'Event styling',
         categoryId: categories[3].id,
         isActive: true,
       },
@@ -176,7 +196,7 @@ async function main() {
         title: 'Master Barber',
         email: 'marcus@barberq.com',
         phone: '(555) 123-4567',
-        bio: '15 years of experience specializing in fades and modern styles',
+        bio: '15 years experience',
         displayOrder: 1,
         isActive: true,
       },
@@ -187,7 +207,7 @@ async function main() {
         title: 'Senior Stylist',
         email: 'diego@barberq.com',
         phone: '(555) 234-5678',
-        bio: 'Expert in classic cuts and beard grooming',
+        bio: 'Expert in classic cuts',
         displayOrder: 2,
         isActive: true,
       },
@@ -198,7 +218,7 @@ async function main() {
         title: 'Hair Colorist',
         email: 'james@barberq.com',
         phone: '(555) 345-6789',
-        bio: 'Specializes in hair coloring and treatments',
+        bio: 'Specializes in coloring',
         displayOrder: 3,
         isActive: true,
       },
@@ -209,7 +229,7 @@ async function main() {
         title: 'Barber',
         email: 'alex@barberq.com',
         phone: '(555) 456-7890',
-        bio: 'Great with kids and classic styles',
+        bio: 'Great with kids',
         displayOrder: 4,
         isActive: true,
       },
@@ -219,525 +239,611 @@ async function main() {
   // 4. Create Staff-Service Assignments
   console.log('🔗 Linking staff to services...')
   await Promise.all([
-    // Marcus - Specializes in Haircuts and Fades
-    prisma.staffService.create({
-      data: {
-        staffId: staff[0].id,
-        serviceId: services[0].id, // Classic Haircut
-        isPrimary: true,
-        yearsExperience: 15,
-      },
-    }),
-    prisma.staffService.create({
-      data: {
-        staffId: staff[0].id,
-        serviceId: services[1].id, // Premium Fade
-        isPrimary: true,
-        yearsExperience: 12,
-      },
-    }),
-    prisma.staffService.create({
-      data: {
-        staffId: staff[0].id,
-        serviceId: services[4].id, // Beard Trim
-        isPrimary: false,
-        yearsExperience: 10,
-      },
-    }),
-
-    // Diego - Classic cuts and beard
-    prisma.staffService.create({
-      data: {
-        staffId: staff[1].id,
-        serviceId: services[0].id, // Classic Haircut
-        isPrimary: true,
-        yearsExperience: 10,
-      },
-    }),
-    prisma.staffService.create({
-      data: {
-        staffId: staff[1].id,
-        serviceId: services[4].id, // Beard Trim
-        isPrimary: true,
-        yearsExperience: 10,
-      },
-    }),
-    prisma.staffService.create({
-      data: {
-        staffId: staff[1].id,
-        serviceId: services[5].id, // Hot Towel Shave
-        isPrimary: true,
-        yearsExperience: 8,
-      },
-    }),
-    prisma.staffService.create({
-      data: {
-        staffId: staff[1].id,
-        serviceId: services[6].id, // Beard & Haircut Combo
-        isPrimary: true,
-        yearsExperience: 9,
-      },
-    }),
-
-    // James - Hair treatments specialist
-    prisma.staffService.create({
-      data: {
-        staffId: staff[2].id,
-        serviceId: services[7].id, // Hair Coloring
-        isPrimary: true,
-        yearsExperience: 8,
-      },
-    }),
-    prisma.staffService.create({
-      data: {
-        staffId: staff[2].id,
-        serviceId: services[8].id, // Scalp Treatment
-        isPrimary: true,
-        yearsExperience: 6,
-      },
-    }),
-    prisma.staffService.create({
-      data: {
-        staffId: staff[2].id,
-        serviceId: services[9].id, // Hair Styling
-        isPrimary: false,
-        yearsExperience: 5,
-      },
-    }),
-
-    // Alex - All-rounder, great with kids
-    prisma.staffService.create({
-      data: {
-        staffId: staff[3].id,
-        serviceId: services[3].id, // Kids Haircut
-        isPrimary: true,
-        yearsExperience: 5,
-      },
-    }),
-    prisma.staffService.create({
-      data: {
-        staffId: staff[3].id,
-        serviceId: services[2].id, // Buzz Cut
-        isPrimary: true,
-        yearsExperience: 4,
-      },
-    }),
-    prisma.staffService.create({
-      data: {
-        staffId: staff[3].id,
-        serviceId: services[0].id, // Classic Haircut
-        isPrimary: false,
-        yearsExperience: 4,
-      },
-    }),
+    // Marcus - Premium services
+    prisma.staffService.create({ data: { staffId: staff[0].id, serviceId: services[4].id, isPrimary: true, yearsExperience: 15 } }),
+    prisma.staffService.create({ data: { staffId: staff[0].id, serviceId: services[0].id, isPrimary: true, yearsExperience: 12 } }),
+    prisma.staffService.create({ data: { staffId: staff[0].id, serviceId: services[6].id, isPrimary: true, yearsExperience: 10 } }),
+    // Diego - Classic and beard
+    prisma.staffService.create({ data: { staffId: staff[1].id, serviceId: services[0].id, isPrimary: true, yearsExperience: 10 } }),
+    prisma.staffService.create({ data: { staffId: staff[1].id, serviceId: services[2].id, isPrimary: true, yearsExperience: 10 } }),
+    prisma.staffService.create({ data: { staffId: staff[1].id, serviceId: services[5].id, isPrimary: true, yearsExperience: 8 } }),
+    prisma.staffService.create({ data: { staffId: staff[1].id, serviceId: services[6].id, isPrimary: true, yearsExperience: 9 } }),
+    // James - Treatments
+    prisma.staffService.create({ data: { staffId: staff[2].id, serviceId: services[7].id, isPrimary: true, yearsExperience: 8 } }),
+    prisma.staffService.create({ data: { staffId: staff[2].id, serviceId: services[8].id, isPrimary: true, yearsExperience: 6 } }),
+    prisma.staffService.create({ data: { staffId: staff[2].id, serviceId: services[9].id, isPrimary: false, yearsExperience: 5 } }),
+    // Alex - Basic services
+    prisma.staffService.create({ data: { staffId: staff[3].id, serviceId: services[3].id, isPrimary: true, yearsExperience: 5 } }),
+    prisma.staffService.create({ data: { staffId: staff[3].id, serviceId: services[1].id, isPrimary: true, yearsExperience: 4 } }),
+    prisma.staffService.create({ data: { staffId: staff[3].id, serviceId: services[0].id, isPrimary: false, yearsExperience: 4 } }),
   ])
 
-  // 5. Create Customers with Historical Visits
-  console.log('👥 Creating customers with visit history...')
+  // 5. Create Customers with Different Patterns
+  console.log('👥 Creating customers with various visit patterns...')
   const now = new Date()
-  
-  // Helper function to create historical visits
-  const createHistoricalVisits = (
-    customerId: string,
-    customerName: string,
-    serviceName: string,
-    staffId: string | null,
-    monthsBack: number,
-    intervalMonths: number,
-    serviceDuration: number
-  ) => {
-    const visits = []
-    const today = new Date()
+  const ninetyDaysAgo = addDays(now, -90)
+  const thirtyDaysAgo = addDays(now, -30)
+  const sixtyDaysAgo = addDays(now, -60)
+
+  // Regular monthly customers (for repeat visit insights)
+  const regularCustomers = []
+  for (let i = 0; i < 10; i++) {
+    const customer = await prisma.customer.create({
+      data: { phone: `+9112345678${String(i).padStart(2, '0')}`, name: `Regular Customer ${i + 1}` },
+    })
+    regularCustomers.push(customer)
+  }
+
+  // Bi-monthly customers
+  const biMonthlyCustomers = []
+  for (let i = 0; i < 8; i++) {
+    const customer = await prisma.customer.create({
+      data: { phone: `+9112345688${String(i).padStart(2, '0')}`, name: `BiMonthly Customer ${i + 1}` },
+    })
+    biMonthlyCustomers.push(customer)
+  }
+
+  // Quarterly customers
+  const quarterlyCustomers = []
+  for (let i = 0; i < 6; i++) {
+    const customer = await prisma.customer.create({
+      data: { phone: `+9112345698${String(i).padStart(2, '0')}`, name: `Quarterly Customer ${i + 1}` },
+    })
+    quarterlyCustomers.push(customer)
+  }
+
+  // Inactive customers (30+ days) - for churn risk
+  const inactive30Customers = []
+  for (let i = 0; i < 5; i++) {
+    const customer = await prisma.customer.create({
+      data: { phone: `+9112345708${String(i).padStart(2, '0')}`, name: `Inactive 30d Customer ${i + 1}` },
+    })
+    inactive30Customers.push(customer)
+  }
+
+  // Inactive customers (60+ days)
+  const inactive60Customers = []
+  for (let i = 0; i < 5; i++) {
+    const customer = await prisma.customer.create({
+      data: { phone: `+9112345718${String(i).padStart(2, '0')}`, name: `Inactive 60d Customer ${i + 1}` },
+    })
+    inactive60Customers.push(customer)
+  }
+
+  // Inactive customers (90+ days) - high churn risk
+  const inactive90Customers = []
+  for (let i = 0; i < 5; i++) {
+    const customer = await prisma.customer.create({
+      data: { phone: `+9112345728${String(i).padStart(2, '0')}`, name: `Inactive 90d Customer ${i + 1}` },
+    })
+    inactive90Customers.push(customer)
+  }
+
+  // Basic service only customers (for upsell opportunities)
+  const basicOnlyCustomers = []
+  for (let i = 0; i < 8; i++) {
+    const customer = await prisma.customer.create({
+      data: { phone: `+9112345738${String(i).padStart(2, '0')}`, name: `Basic Only Customer ${i + 1}` },
+    })
+    basicOnlyCustomers.push(customer)
+  }
+
+  // High-value customers (for personalization)
+  const highValueCustomers = []
+  for (let i = 0; i < 5; i++) {
+    const customer = await prisma.customer.create({
+      data: { phone: `+9112345748${String(i).padStart(2, '0')}`, name: `High Value Customer ${i + 1}` },
+    })
+    highValueCustomers.push(customer)
+  }
+
+  // New customers (for no-show risk)
+  const newCustomers = []
+  for (let i = 0; i < 5; i++) {
+    const customer = await prisma.customer.create({
+      data: { phone: `+9112345758${String(i).padStart(2, '0')}`, name: `New Customer ${i + 1}` },
+    })
+    newCustomers.push(customer)
+  }
+
+  // 6. Generate Historical Walk-Ins (Last 90 Days)
+  console.log('📅 Generating historical walk-ins (last 90 days)...')
+  const allWalkIns = []
+
+  // Regular customers - monthly visits
+  for (const customer of regularCustomers) {
+    const service = randomElement([services[0], services[4], services[6]]) // Mix of services
+    const staffMember = randomElement(staff)
+    let lastVisit = addDays(now, -30)
     
-    for (let i = 0; i < monthsBack; i += intervalMonths) {
-      const visitDate = new Date(today)
-      visitDate.setMonth(today.getMonth() - i)
-      // Randomize day of month (1-28 to avoid month-end issues)
-      visitDate.setDate(Math.floor(Math.random() * 28) + 1)
-      // Randomize time (9 AM - 5 PM)
-      visitDate.setHours(9 + Math.floor(Math.random() * 8), Math.floor(Math.random() * 60), 0, 0)
+    for (let month = 0; month < 6; month++) {
+      const visitDate = addDays(lastVisit, -month * 30 + randomInt(-5, 5))
+      if (visitDate < ninetyDaysAgo) continue
       
-      const createdAt = new Date(visitDate)
-      const startedAt = new Date(visitDate.getTime() + 5 * 60 * 1000) // Started 5 mins after arrival
-      const completedAt = new Date(startedAt.getTime() + serviceDuration * 60 * 1000)
-      
-      visits.push({
-        customerId,
-        customerName,
-        service: serviceName,
-        staffId,
+      const createdAt = randomDate(
+        new Date(visitDate.setHours(9, 0, 0, 0)),
+        new Date(visitDate.setHours(17, 0, 0, 0))
+      )
+      const startedAt = new Date(createdAt.getTime() + randomInt(5, 15) * 60 * 1000)
+      const completedAt = new Date(startedAt.getTime() + service.duration * 60 * 1000)
+
+      allWalkIns.push({
+        customerId: customer.id,
+        customerName: customer.name,
+        service: service.name,
+        staffId: staffMember.id,
         status: 'done',
         createdAt,
         startedAt,
         completedAt,
       })
     }
-    
-    return visits
   }
-  
-  // Create customers with different visit frequencies
-  
-  // Monthly regular customers (visit every month for past 8-12 months)
-  const monthlyCustomer1 = await prisma.customer.create({
-    data: { phone: '+911234567890', name: 'Rajesh Kumar' },
-  })
-  const monthlyCustomer2 = await prisma.customer.create({
-    data: { phone: '+911234567891', name: 'Priya Sharma' },
-  })
-  const monthlyCustomer3 = await prisma.customer.create({
-    data: { phone: '+911234567892', name: 'Amit Patel' },
-  })
-  const monthlyCustomer4 = await prisma.customer.create({
-    data: { phone: '+911234567898', name: 'Ravi Nair' },
-  })
-  const monthlyCustomer5 = await prisma.customer.create({
-    data: { phone: '+911234567899', name: 'Sunita Desai' },
-  })
-  const monthlyCustomer6 = await prisma.customer.create({
-    data: { phone: '+911234567900', name: 'Mohammed Ali' },
-  })
-  const monthlyCustomer7 = await prisma.customer.create({
-    data: { phone: '+911234567901', name: 'Kavita Joshi' },
-  })
-  
-  // Bi-monthly customers (visit every 2 months for past 10-12 months = 5-6 visits)
-  const biMonthlyCustomer1 = await prisma.customer.create({
-    data: { phone: '+911234567893', name: 'Vikram Singh' },
-  })
-  const biMonthlyCustomer2 = await prisma.customer.create({
-    data: { phone: '+911234567894', name: 'Anjali Mehta' },
-  })
-  const biMonthlyCustomer3 = await prisma.customer.create({
-    data: { phone: '+911234567902', name: 'Arjun Kapoor' },
-  })
-  const biMonthlyCustomer4 = await prisma.customer.create({
-    data: { phone: '+911234567903', name: 'Meera Iyer' },
-  })
-  const biMonthlyCustomer5 = await prisma.customer.create({
-    data: { phone: '+911234567904', name: 'Suresh Menon' },
-  })
-  
-  // Quarterly customers (visit every 3 months)
-  const quarterlyCustomer1 = await prisma.customer.create({
-    data: { phone: '+911234567905', name: 'Neha Gupta' },
-  })
-  const quarterlyCustomer2 = await prisma.customer.create({
-    data: { phone: '+911234567906', name: 'Rohit Agarwal' },
-  })
-  const quarterlyCustomer3 = await prisma.customer.create({
-    data: { phone: '+911234567907', name: 'Pooja Shah' },
-  })
-  
-  // Rare customers (1-2 visits in past year)
-  const rareCustomer1 = await prisma.customer.create({
-    data: { phone: '+911234567895', name: 'Deepak Verma' },
-  })
-  const rareCustomer2 = await prisma.customer.create({
-    data: { phone: '+911234567896', name: 'Sneha Reddy' },
-  })
-  const rareCustomer3 = await prisma.customer.create({
-    data: { phone: '+911234567897', name: 'Karan Malhotra' },
-  })
-  const rareCustomer4 = await prisma.customer.create({
-    data: { phone: '+911234567908', name: 'Aditya Rao' },
-  })
-  const rareCustomer5 = await prisma.customer.create({
-    data: { phone: '+911234567909', name: 'Divya Nair' },
-  })
-  const rareCustomer6 = await prisma.customer.create({
-    data: { phone: '+911234567910', name: 'Varun Krishnan' },
-  })
-  const rareCustomer7 = await prisma.customer.create({
-    data: { phone: '+911234567911', name: 'Lakshmi Pillai' },
-  })
-  const rareCustomer8 = await prisma.customer.create({
-    data: { phone: '+911234567912', name: 'Gaurav Chawla' },
-  })
-  
-  // Create historical visits for monthly customers
-  console.log('📅 Creating monthly visit history...')
-  const monthlyVisits1 = createHistoricalVisits(
-    monthlyCustomer1.id, monthlyCustomer1.name, 'Premium Fade', staff[0].id, 8, 1, 45
-  )
-  const monthlyVisits2 = createHistoricalVisits(
-    monthlyCustomer2.id, monthlyCustomer2.name, 'Classic Haircut', staff[1].id, 8, 1, 30
-  )
-  const monthlyVisits3 = createHistoricalVisits(
-    monthlyCustomer3.id, monthlyCustomer3.name, 'Beard & Haircut Combo', staff[1].id, 8, 1, 50
-  )
-  const monthlyVisits4 = createHistoricalVisits(
-    monthlyCustomer4.id, monthlyCustomer4.name, 'Classic Haircut', staff[0].id, 10, 1, 30
-  )
-  const monthlyVisits5 = createHistoricalVisits(
-    monthlyCustomer5.id, monthlyCustomer5.name, 'Hair Styling', staff[2].id, 9, 1, 30
-  )
-  const monthlyVisits6 = createHistoricalVisits(
-    monthlyCustomer6.id, monthlyCustomer6.name, 'Premium Fade', staff[0].id, 12, 1, 45
-  )
-  const monthlyVisits7 = createHistoricalVisits(
-    monthlyCustomer7.id, monthlyCustomer7.name, 'Beard Trim', staff[1].id, 7, 1, 20
-  )
-  
-  // Create historical visits for bi-monthly customers
-  console.log('📅 Creating bi-monthly visit history...')
-  const biMonthlyVisits1 = createHistoricalVisits(
-    biMonthlyCustomer1.id, biMonthlyCustomer1.name, 'Classic Haircut', staff[0].id, 10, 2, 30
-  )
-  const biMonthlyVisits2 = createHistoricalVisits(
-    biMonthlyCustomer2.id, biMonthlyCustomer2.name, 'Hair Styling', staff[2].id, 10, 2, 30
-  )
-  const biMonthlyVisits3 = createHistoricalVisits(
-    biMonthlyCustomer3.id, biMonthlyCustomer3.name, 'Premium Fade', staff[0].id, 12, 2, 45
-  )
-  const biMonthlyVisits4 = createHistoricalVisits(
-    biMonthlyCustomer4.id, biMonthlyCustomer4.name, 'Beard & Haircut Combo', staff[1].id, 10, 2, 50
-  )
-  const biMonthlyVisits5 = createHistoricalVisits(
-    biMonthlyCustomer5.id, biMonthlyCustomer5.name, 'Classic Haircut', staff[1].id, 8, 2, 30
-  )
-  
-  // Create historical visits for quarterly customers
-  console.log('📅 Creating quarterly visit history...')
-  const quarterlyVisits1 = createHistoricalVisits(
-    quarterlyCustomer1.id, quarterlyCustomer1.name, 'Hair Coloring', staff[2].id, 12, 3, 90
-  )
-  const quarterlyVisits2 = createHistoricalVisits(
-    quarterlyCustomer2.id, quarterlyCustomer2.name, 'Classic Haircut', staff[0].id, 9, 3, 30
-  )
-  const quarterlyVisits3 = createHistoricalVisits(
-    quarterlyCustomer3.id, quarterlyCustomer3.name, 'Hot Towel Shave', staff[1].id, 12, 3, 35
-  )
-  
-  // Create rare visits (1-2 visits in past year)
-  console.log('📅 Creating rare visit history...')
-  const rareVisits1 = createHistoricalVisits(
-    rareCustomer1.id, rareCustomer1.name, 'Hot Towel Shave', staff[1].id, 8, 8, 35
-  )
-  const rareVisits2a = createHistoricalVisits(
-    rareCustomer2.id, rareCustomer2.name, 'Hair Coloring', staff[2].id, 6, 6, 90
-  )
-  const rareVisits2b = createHistoricalVisits(
-    rareCustomer2.id, rareCustomer2.name, 'Hair Coloring', staff[2].id, 2, 2, 90
-  )
-  const rareVisits3 = createHistoricalVisits(
-    rareCustomer3.id, rareCustomer3.name, 'Buzz Cut', staff[3].id, 10, 10, 20
-  )
-  const rareVisits4 = createHistoricalVisits(
-    rareCustomer4.id, rareCustomer4.name, 'Classic Haircut', staff[0].id, 11, 11, 30
-  )
-  const rareVisits5a = createHistoricalVisits(
-    rareCustomer5.id, rareCustomer5.name, 'Scalp Treatment', staff[2].id, 7, 7, 40
-  )
-  const rareVisits5b = createHistoricalVisits(
-    rareCustomer5.id, rareCustomer5.name, 'Hair Styling', staff[2].id, 3, 3, 30
-  )
-  const rareVisits6 = createHistoricalVisits(
-    rareCustomer6.id, rareCustomer6.name, 'Beard Trim', staff[1].id, 9, 9, 20
-  )
-  const rareVisits7 = createHistoricalVisits(
-    rareCustomer7.id, rareCustomer7.name, 'Kids Haircut', staff[3].id, 6, 6, 25
-  )
-  const rareVisits8 = createHistoricalVisits(
-    rareCustomer8.id, rareCustomer8.name, 'Premium Fade', staff[0].id, 5, 5, 45
-  )
-  
-  // Insert all historical visits
-  const allHistoricalVisits = [
-    ...monthlyVisits1,
-    ...monthlyVisits2,
-    ...monthlyVisits3,
-    ...monthlyVisits4,
-    ...monthlyVisits5,
-    ...monthlyVisits6,
-    ...monthlyVisits7,
-    ...biMonthlyVisits1,
-    ...biMonthlyVisits2,
-    ...biMonthlyVisits3,
-    ...biMonthlyVisits4,
-    ...biMonthlyVisits5,
-    ...quarterlyVisits1,
-    ...quarterlyVisits2,
-    ...quarterlyVisits3,
-    ...rareVisits1,
-    ...rareVisits2a,
-    ...rareVisits2b,
-    ...rareVisits3,
-    ...rareVisits4,
-    ...rareVisits5a,
-    ...rareVisits5b,
-    ...rareVisits6,
-    ...rareVisits7,
-    ...rareVisits8,
-  ]
-  
-  await prisma.walkIn.createMany({
-    data: allHistoricalVisits,
-  })
 
-  // 6. Create Current Walk-Ins (Queue Data)
-  console.log('🚶 Creating current walk-in customers...')
-  
-  // Create customers for current walk-ins
-  const currentCustomer1 = await prisma.customer.create({
-    data: { phone: '+911234567913', name: 'Michael Johnson' },
-  })
-  const currentCustomer2 = await prisma.customer.create({
-    data: { phone: '+911234567914', name: 'Sarah Martinez' },
-  })
-  const currentCustomer3 = await prisma.customer.create({
-    data: { phone: '+911234567915', name: 'David Lee' },
-  })
-  const currentCustomer4 = await prisma.customer.create({
-    data: { phone: '+911234567916', name: 'Tommy Anderson' },
-  })
-  const currentCustomer5 = await prisma.customer.create({
-    data: { phone: '+911234567917', name: 'Robert Wilson' },
-  })
-  const currentCustomer6 = await prisma.customer.create({
-    data: { phone: '+911234567918', name: 'Chris Brown' },
-  })
-  const currentCustomer7 = await prisma.customer.create({
-    data: { phone: '+911234567919', name: 'Jason Taylor' },
-  })
-  const currentCustomer8 = await prisma.customer.create({
-    data: { phone: '+911234567920', name: 'Kevin White' },
-  })
-  const currentCustomer9 = await prisma.customer.create({
-    data: { phone: '+911234567921', name: 'Daniel Harris' },
-  })
-  
-  const walkIns = await Promise.all([
-    // Currently being served
+  // Bi-monthly customers
+  for (const customer of biMonthlyCustomers) {
+    const service = randomElement([services[0], services[2], services[4]])
+    const staffMember = randomElement(staff)
+    let lastVisit = addDays(now, -60)
+    
+    for (let period = 0; period < 4; period++) {
+      const visitDate = addDays(lastVisit, -period * 60 + randomInt(-7, 7))
+      if (visitDate < ninetyDaysAgo) continue
+      
+      const createdAt = randomDate(
+        new Date(visitDate.setHours(9, 0, 0, 0)),
+        new Date(visitDate.setHours(17, 0, 0, 0))
+      )
+      const startedAt = new Date(createdAt.getTime() + randomInt(5, 15) * 60 * 1000)
+      const completedAt = new Date(startedAt.getTime() + service.duration * 60 * 1000)
+
+      allWalkIns.push({
+        customerId: customer.id,
+        customerName: customer.name,
+        service: service.name,
+        staffId: staffMember.id,
+        status: 'done',
+        createdAt,
+        startedAt,
+        completedAt,
+      })
+    }
+  }
+
+  // Quarterly customers
+  for (const customer of quarterlyCustomers) {
+    const service = randomElement([services[0], services[5], services[7]])
+    const staffMember = randomElement(staff)
+    
+    for (let quarter = 0; quarter < 3; quarter++) {
+      const visitDate = addDays(now, -quarter * 90 + randomInt(-10, 10))
+      if (visitDate < ninetyDaysAgo) continue
+      
+      const createdAt = randomDate(
+        new Date(visitDate.setHours(9, 0, 0, 0)),
+        new Date(visitDate.setHours(17, 0, 0, 0))
+      )
+      const startedAt = new Date(createdAt.getTime() + randomInt(5, 15) * 60 * 1000)
+      const completedAt = new Date(startedAt.getTime() + service.duration * 60 * 1000)
+
+      allWalkIns.push({
+        customerId: customer.id,
+        customerName: customer.name,
+        service: service.name,
+        staffId: staffMember.id,
+        status: 'done',
+        createdAt,
+        startedAt,
+        completedAt,
+      })
+    }
+  }
+
+  // Inactive 30 days customers - last visit 30-40 days ago
+  for (const customer of inactive30Customers) {
+    const service = randomElement([services[0], services[2]])
+    const staffMember = randomElement(staff)
+    const visitDate = addDays(now, -randomInt(30, 40))
+    
+    const createdAt = randomDate(
+      new Date(visitDate.setHours(9, 0, 0, 0)),
+      new Date(visitDate.setHours(17, 0, 0, 0))
+    )
+    const startedAt = new Date(createdAt.getTime() + randomInt(5, 15) * 60 * 1000)
+    const completedAt = new Date(startedAt.getTime() + service.duration * 60 * 1000)
+
+    allWalkIns.push({
+      customerId: customer.id,
+      customerName: customer.name,
+      service: service.name,
+      staffId: staffMember.id,
+      status: 'done',
+      createdAt,
+      startedAt,
+      completedAt,
+    })
+  }
+
+  // Inactive 60 days customers
+  for (const customer of inactive60Customers) {
+    const service = randomElement([services[0], services[4]])
+    const staffMember = randomElement(staff)
+    const visitDate = addDays(now, -randomInt(60, 70))
+    
+    const createdAt = randomDate(
+      new Date(visitDate.setHours(9, 0, 0, 0)),
+      new Date(visitDate.setHours(17, 0, 0, 0))
+    )
+    const startedAt = new Date(createdAt.getTime() + randomInt(5, 15) * 60 * 1000)
+    const completedAt = new Date(startedAt.getTime() + service.duration * 60 * 1000)
+
+    allWalkIns.push({
+      customerId: customer.id,
+      customerName: customer.name,
+      service: service.name,
+      staffId: staffMember.id,
+      status: 'done',
+      createdAt,
+      startedAt,
+      completedAt,
+    })
+  }
+
+  // Inactive 90+ days customers - high churn risk
+  for (const customer of inactive90Customers) {
+    const service = randomElement([services[0], services[4], services[6]])
+    const staffMember = randomElement(staff)
+    const visitDate = addDays(now, -randomInt(90, 120))
+    
+    const createdAt = randomDate(
+      new Date(visitDate.setHours(9, 0, 0, 0)),
+      new Date(visitDate.setHours(17, 0, 0, 0))
+    )
+    const startedAt = new Date(createdAt.getTime() + randomInt(5, 15) * 60 * 1000)
+    const completedAt = new Date(startedAt.getTime() + service.duration * 60 * 1000)
+
+    allWalkIns.push({
+      customerId: customer.id,
+      customerName: customer.name,
+      service: service.name,
+      staffId: staffMember.id,
+      status: 'done',
+      createdAt,
+      startedAt,
+      completedAt,
+    })
+  }
+
+  // Basic service only customers - only book basic services (for upsell)
+  for (const customer of basicOnlyCustomers) {
+    const basicServices = [services[0], services[1], services[2], services[3]] // Only basic
+    const service = randomElement(basicServices)
+    const staffMember = randomElement(staff)
+    
+    // Create 3-5 visits with only basic services
+    for (let visit = 0; visit < randomInt(3, 5); visit++) {
+      const visitDate = addDays(now, -randomInt(10, 90))
+      if (visitDate < ninetyDaysAgo) continue
+      
+      const createdAt = randomDate(
+        new Date(visitDate.setHours(9, 0, 0, 0)),
+        new Date(visitDate.setHours(17, 0, 0, 0))
+      )
+      const startedAt = new Date(createdAt.getTime() + randomInt(5, 15) * 60 * 1000)
+      const completedAt = new Date(startedAt.getTime() + service.duration * 60 * 1000)
+
+      allWalkIns.push({
+        customerId: customer.id,
+        customerName: customer.name,
+        service: service.name,
+        staffId: staffMember.id,
+        status: 'done',
+        createdAt,
+        startedAt,
+        completedAt,
+      })
+    }
+  }
+
+  // High-value customers - book premium services frequently
+  for (const customer of highValueCustomers) {
+    const premiumServices = [services[4], services[5], services[6], services[7], services[8]]
+    const service = randomElement(premiumServices)
+    const staffMember = randomElement(staff)
+    
+    for (let visit = 0; visit < randomInt(8, 12); visit++) {
+      const visitDate = addDays(now, -randomInt(5, 90))
+      if (visitDate < ninetyDaysAgo) continue
+      
+      const createdAt = randomDate(
+        new Date(visitDate.setHours(9, 0, 0, 0)),
+        new Date(visitDate.setHours(17, 0, 0, 0))
+      )
+      const startedAt = new Date(createdAt.getTime() + randomInt(5, 15) * 60 * 1000)
+      const completedAt = new Date(startedAt.getTime() + service.duration * 60 * 1000)
+
+      allWalkIns.push({
+        customerId: customer.id,
+        customerName: customer.name,
+        service: service.name,
+        staffId: staffMember.id,
+        status: 'done',
+        createdAt,
+        startedAt,
+        completedAt,
+      })
+    }
+  }
+
+  // New customers - 1-2 visits (for no-show risk)
+  for (const customer of newCustomers) {
+    const service = randomElement(services)
+    const staffMember = randomElement(staff)
+    const visitDate = addDays(now, -randomInt(1, 14))
+    
+    const createdAt = randomDate(
+      new Date(visitDate.setHours(9, 0, 0, 0)),
+      new Date(visitDate.setHours(17, 0, 0, 0))
+    )
+    const startedAt = new Date(createdAt.getTime() + randomInt(5, 15) * 60 * 1000)
+    const completedAt = new Date(startedAt.getTime() + service.duration * 60 * 1000)
+
+    allWalkIns.push({
+      customerId: customer.id,
+      customerName: customer.name,
+      service: service.name,
+      staffId: staffMember.id,
+      status: 'done',
+      createdAt,
+      startedAt,
+      completedAt,
+    })
+  }
+
+  // Generate walk-ins across different days/hours for slot optimization
+  console.log('⏰ Generating walk-ins across different time slots...')
+  for (let day = 0; day < 90; day++) {
+    const date = addDays(now, -day)
+    const dayOfWeek = date.getDay()
+    
+    // More bookings on weekends (Friday, Saturday)
+    const isWeekend = dayOfWeek === 5 || dayOfWeek === 6
+    const bookingCount = isWeekend ? randomInt(8, 15) : randomInt(5, 12)
+    
+    for (let booking = 0; booking < bookingCount; booking++) {
+      const hour = randomInt(9, 17) // 9 AM to 5 PM
+      const customer = await prisma.customer.create({
+        data: { 
+          phone: `+9112345${String(day).padStart(3, '0')}${String(booking).padStart(2, '0')}`, 
+          name: `Walk-in Customer ${day}-${booking}` 
+        },
+      })
+      
+      const service = randomElement(services)
+      const staffMember = randomElement(staff)
+      
+      const createdAt = new Date(date)
+      createdAt.setHours(hour, randomInt(0, 59), 0, 0)
+      
+      const startedAt = new Date(createdAt.getTime() + randomInt(5, 15) * 60 * 1000)
+      const completedAt = new Date(startedAt.getTime() + service.duration * 60 * 1000)
+
+      allWalkIns.push({
+        customerId: customer.id,
+        customerName: customer.name,
+        service: service.name,
+        staffId: staffMember.id,
+        status: 'done',
+        createdAt,
+        startedAt,
+        completedAt,
+      })
+    }
+  }
+
+  // Add some incomplete visits (for no-show risk analysis)
+  console.log('⚠️ Adding incomplete visits (no-show risk)...')
+  for (let i = 0; i < 10; i++) {
+    const customer = await prisma.customer.create({
+      data: { 
+        phone: `+9112345999${String(i).padStart(2, '0')}`, 
+        name: `No-show Risk Customer ${i + 1}` 
+      },
+    })
+    
+    const service = randomElement(services)
+    const staffMember = randomElement(staff)
+    const visitDate = addDays(now, -randomInt(1, 30))
+    
+    const createdAt = randomDate(
+      new Date(visitDate.setHours(9, 0, 0, 0)),
+      new Date(visitDate.setHours(17, 0, 0, 0))
+    )
+    const startedAt = new Date(createdAt.getTime() + randomInt(5, 15) * 60 * 1000)
+    // No completedAt - service started but not finished
+
+    allWalkIns.push({
+      customerId: customer.id,
+      customerName: customer.name,
+      service: service.name,
+      staffId: staffMember.id,
+      status: 'in-progress', // Stuck in progress
+      createdAt,
+      startedAt,
+      completedAt: null,
+    })
+  }
+
+  // Service combinations - customers who book services together
+  console.log('📦 Creating service combination patterns...')
+  for (let i = 0; i < 10; i++) {
+    const customer = await prisma.customer.create({
+      data: { 
+        phone: `+9112345888${String(i).padStart(2, '0')}`, 
+        name: `Combo Customer ${i + 1}` 
+      },
+    })
+    
+    // Book Classic Haircut + Beard Trim together (within 7 days)
+    const firstService = services[0] // Classic Haircut
+    const secondService = services[2] // Beard Trim
+    const staffMember = randomElement(staff)
+    
+    const firstDate = addDays(now, -randomInt(10, 30))
+    const secondDate = addDays(firstDate, randomInt(1, 7)) // Within 7 days
+    
+    // First service
+    const createdAt1 = randomDate(
+      new Date(firstDate.setHours(9, 0, 0, 0)),
+      new Date(firstDate.setHours(17, 0, 0, 0))
+    )
+    const startedAt1 = new Date(createdAt1.getTime() + randomInt(5, 15) * 60 * 1000)
+    const completedAt1 = new Date(startedAt1.getTime() + firstService.duration * 60 * 1000)
+
+    allWalkIns.push({
+      customerId: customer.id,
+      customerName: customer.name,
+      service: firstService.name,
+      staffId: staffMember.id,
+      status: 'done',
+      createdAt: createdAt1,
+      startedAt: startedAt1,
+      completedAt: completedAt1,
+    })
+
+    // Second service
+    const createdAt2 = randomDate(
+      new Date(secondDate.setHours(9, 0, 0, 0)),
+      new Date(secondDate.setHours(17, 0, 0, 0))
+    )
+    const startedAt2 = new Date(createdAt2.getTime() + randomInt(5, 15) * 60 * 1000)
+    const completedAt2 = new Date(startedAt2.getTime() + secondService.duration * 60 * 1000)
+
+    allWalkIns.push({
+      customerId: customer.id,
+      customerName: customer.name,
+      service: secondService.name,
+      staffId: staffMember.id,
+      status: 'done',
+      createdAt: createdAt2,
+      startedAt: startedAt2,
+      completedAt: completedAt2,
+    })
+  }
+
+  // Insert all walk-ins in batches
+  console.log(`💾 Inserting ${allWalkIns.length} walk-ins...`)
+  const batchSize = 100
+  for (let i = 0; i < allWalkIns.length; i += batchSize) {
+    const batch = allWalkIns.slice(i, i + batchSize)
+    await prisma.walkIn.createMany({ data: batch })
+    console.log(`   Inserted ${Math.min(i + batchSize, allWalkIns.length)}/${allWalkIns.length} walk-ins`)
+  }
+
+  // 7. Create Current Queue Items
+  console.log('🚶 Creating current queue items...')
+  const currentCustomers = []
+  for (let i = 0; i < 5; i++) {
+    const customer = await prisma.customer.create({
+      data: { 
+        phone: `+9112345777${String(i).padStart(2, '0')}`, 
+        name: `Current Customer ${i + 1}` 
+      },
+    })
+    currentCustomers.push(customer)
+  }
+
+  await Promise.all([
+    // In progress
     prisma.walkIn.create({
       data: {
-        customerId: currentCustomer1.id,
-        customerName: 'Michael Johnson',
-        service: 'Premium Fade',
+        customerId: currentCustomers[0].id,
+        customerName: currentCustomers[0].name,
+        service: services[4].name,
         staffId: staff[0].id,
         status: 'in-progress',
-        notes: 'Wants a skin fade with textured top',
-        createdAt: new Date(now.getTime() - 25 * 60 * 1000), // 25 mins ago
-        startedAt: new Date(now.getTime() - 10 * 60 * 1000), // Started 10 mins ago
+        createdAt: addDays(now, 0),
+        startedAt: addDays(now, 0),
       },
     }),
     prisma.walkIn.create({
       data: {
-        customerId: currentCustomer2.id,
-        customerName: 'Sarah Martinez',
-        service: 'Hair Coloring',
-        staffId: staff[2].id,
+        customerId: currentCustomers[1].id,
+        customerName: currentCustomers[1].name,
+        service: services[0].name,
+        staffId: staff[1].id,
         status: 'in-progress',
-        notes: 'Ash blonde highlights',
-        createdAt: new Date(now.getTime() - 50 * 60 * 1000), // 50 mins ago
-        startedAt: new Date(now.getTime() - 35 * 60 * 1000), // Started 35 mins ago
+        createdAt: addDays(now, 0),
+        startedAt: addDays(now, 0),
       },
     }),
-
-    // Waiting in queue
+    // Waiting
     prisma.walkIn.create({
       data: {
-        customerId: currentCustomer3.id,
-        customerName: 'David Lee',
-        service: 'Classic Haircut',
-        staffId: staff[1].id,
+        customerId: currentCustomers[2].id,
+        customerName: currentCustomers[2].name,
+        service: services[2].name,
         status: 'waiting',
-        notes: 'Regular customer, knows the style',
-        createdAt: new Date(now.getTime() - 8 * 60 * 1000), // 8 mins ago
+        createdAt: addDays(now, 0),
       },
     }),
     prisma.walkIn.create({
       data: {
-        customerId: currentCustomer4.id,
-        customerName: 'Tommy Anderson',
-        service: 'Kids Haircut',
-        staffId: staff[3].id,
+        customerId: currentCustomers[3].id,
+        customerName: currentCustomers[3].name,
+        service: services[1].name,
         status: 'waiting',
-        notes: 'First time, age 7',
-        createdAt: new Date(now.getTime() - 5 * 60 * 1000), // 5 mins ago
+        createdAt: addDays(now, 0),
       },
     }),
     prisma.walkIn.create({
       data: {
-        customerId: currentCustomer5.id,
-        customerName: 'Robert Wilson',
-        service: 'Beard & Haircut Combo',
+        customerId: currentCustomers[4].id,
+        customerName: currentCustomers[4].name,
+        service: services[3].name,
         status: 'waiting',
-        notes: 'No rush, wants full service',
-        createdAt: new Date(now.getTime() - 3 * 60 * 1000), // 3 mins ago
-      },
-    }),
-    prisma.walkIn.create({
-      data: {
-        customerId: currentCustomer6.id,
-        customerName: 'Chris Brown',
-        service: 'Buzz Cut',
-        status: 'waiting',
-        notes: 'Quick trim, #2 all over',
-        createdAt: new Date(now.getTime() - 2 * 60 * 1000), // 2 mins ago
-      },
-    }),
-
-    // Recently completed (for analytics)
-    prisma.walkIn.create({
-      data: {
-        customerId: currentCustomer7.id,
-        customerName: 'Jason Taylor',
-        service: 'Hot Towel Shave',
-        staffId: staff[1].id,
-        status: 'done',
-        notes: 'Very satisfied, tipped well',
-        createdAt: new Date(now.getTime() - 90 * 60 * 1000), // 90 mins ago
-        startedAt: new Date(now.getTime() - 85 * 60 * 1000),
-        completedAt: new Date(now.getTime() - 60 * 60 * 1000), // Completed 60 mins ago
-      },
-    }),
-    prisma.walkIn.create({
-      data: {
-        customerId: currentCustomer8.id,
-        customerName: 'Kevin White',
-        service: 'Premium Fade',
-        staffId: staff[0].id,
-        status: 'done',
-        createdAt: new Date(now.getTime() - 120 * 60 * 1000), // 2 hours ago
-        startedAt: new Date(now.getTime() - 115 * 60 * 1000),
-        completedAt: new Date(now.getTime() - 90 * 60 * 1000), // Completed 90 mins ago
-      },
-    }),
-    prisma.walkIn.create({
-      data: {
-        customerId: currentCustomer9.id,
-        customerName: 'Daniel Harris',
-        service: 'Beard Trim',
-        staffId: staff[0].id,
-        status: 'done',
-        createdAt: new Date(now.getTime() - 135 * 60 * 1000),
-        startedAt: new Date(now.getTime() - 130 * 60 * 1000),
-        completedAt: new Date(now.getTime() - 105 * 60 * 1000), // Completed 105 mins ago
+        createdAt: addDays(now, 0),
       },
     }),
   ])
 
-  console.log('✅ Seed completed successfully!')
+  const totalCustomers = 
+    regularCustomers.length +
+    biMonthlyCustomers.length +
+    quarterlyCustomers.length +
+    inactive30Customers.length +
+    inactive60Customers.length +
+    inactive90Customers.length +
+    basicOnlyCustomers.length +
+    highValueCustomers.length +
+    newCustomers.length +
+    currentCustomers.length +
+    10 + // combo customers
+    10 + // no-show risk
+    90 * 12 // walk-in customers (approx)
+
   console.log(`
+✅ Comprehensive seed completed successfully!
+
 📊 Created:
    - ${categories.length} Categories
-   - ${services.length} Services
+   - ${services.length} Services (${services.filter(s => s.price <= 30).length} basic, ${services.filter(s => s.price > 30).length} premium)
    - ${staff.length} Staff Members
-   - 32 Customers total (23 with historical visits + 9 current walk-ins)
-   - ${allHistoricalVisits.length} Historical visits
-   - ${walkIns.length} Current Walk-In Customers
-   
-💡 Customer Visit Patterns:
-   - Monthly Regulars (7 customers): 7-12 visits each over 7-12 months
-   - Bi-Monthly Regulars (5 customers): 4-6 visits each over 8-12 months
-   - Quarterly Visitors (3 customers): 3-4 visits each over 9-12 months
-   - Rare Visitors (8 customers): 1-2 visits in past year
-   
-💡 Demo ready! Your queue has:
-   - 2 customers currently being served
-   - 4 customers waiting
-   - 3 completed appointments for analytics
+   - ~${totalCustomers} Customers
+   - ${allWalkIns.length} Historical Walk-Ins
+   - 5 Current Queue Items
+
+💡 Data Patterns for Insights Testing:
+   ✅ Churn Risk: ${inactive30Customers.length + inactive60Customers.length + inactive90Customers.length} inactive customers (30/60/90+ days)
+   ✅ Upsell Opportunities: ${basicOnlyCustomers.length} customers only booking basic services
+   ✅ Repeat Visits: ${regularCustomers.length} monthly + ${biMonthlyCustomers.length} bi-monthly + ${quarterlyCustomers.length} quarterly
+   ✅ No-Show Risk: 10 incomplete visits + ${newCustomers.length} new customers
+   ✅ Service Combinations: 10 customers booking services together
+   ✅ Time Distribution: Walk-ins across 90 days, different hours/days
+   ✅ Staff Performance: ${staff.length} staff with varying service assignments
+   ✅ Revenue Trends: Mix of basic/premium services across time periods
+
+🎯 All insights should now have sufficient data to generate meaningful results!
   `)
 }
 
@@ -749,4 +855,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect()
   })
-

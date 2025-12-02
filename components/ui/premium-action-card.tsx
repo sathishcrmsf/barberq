@@ -35,24 +35,24 @@ export function PremiumActionCard({
       {/* Gradient Background */}
       <div
         className={cn(
-          "bg-gradient-to-br p-5 min-h-[110px] flex items-center",
+          "bg-gradient-to-br p-4 min-h-[80px] flex items-center",
           gradient
         )}
       >
         {/* Content */}
         <div className="flex items-center justify-between flex-1 gap-2">
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
-            <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl flex-shrink-0">
-              <Icon className="w-6 h-6 text-white" />
+            <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg flex-shrink-0">
+              <Icon className="w-5 h-5 text-white" />
             </div>
-            <h3 className="text-lg font-bold text-white leading-tight whitespace-nowrap">
+            <h3 className="text-base font-bold text-white leading-tight whitespace-nowrap">
               {title}
               {queueCount !== undefined && (
                 <span className="ml-1.5 opacity-90">({queueCount})</span>
               )}
             </h3>
           </div>
-          <ChevronRight className="w-5 h-5 text-white/70 group-hover:translate-x-1 transition-transform flex-shrink-0" />
+          <ChevronRight className="w-4 h-4 text-white/70 group-hover:translate-x-1 transition-transform flex-shrink-0" />
         </div>
       </div>
 
