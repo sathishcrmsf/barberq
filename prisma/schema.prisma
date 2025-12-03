@@ -38,6 +38,13 @@ model WalkIn {
   createdAt    DateTime  @default(now())
   startedAt    DateTime?
   completedAt  DateTime? // When service was marked as done
+
+  // Performance indexes for frequently queried fields
+  @@index([status])
+  @@index([createdAt])
+  @@index([customerId])
+  @@index([staffId])
+  @@index([status, createdAt]) // Composite index for common query pattern
 }
 
 // Service categories for organization

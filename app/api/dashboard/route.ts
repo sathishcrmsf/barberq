@@ -12,24 +12,92 @@ export async function GET() {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    // Fetch all necessary data in parallel
-    const [walkIns, services, staff] = await Promise.all([
+    // Fetch data in parallel with optimized queries (filter in database, not in memory)
+    const [allWalkIns, todayWalkIns, completedToday, inProgressToday, waitingWalkIns, services, staff] = await Promise.all([
+      // Get all walk-ins for insights (only if needed)
       prisma.walkIn.findMany({
+        select: {
+          id: true,
+          status: true,
+          createdAt: true,
+          startedAt: true,
+          completedAt: true,
+          service: true,
+          staffId: true,
+        },
+        orderBy: { createdAt: "asc" },
+      }),
+      // Get today's walk-ins only
+      prisma.walkIn.findMany({
+        where: {
+          createdAt: { gte: todayStart },
+        },
+        select: {
+          id: true,
+          status: true,
+          createdAt: true,
+          startedAt: true,
+          completedAt: true,
+          service: true,
+          staffId: true,
+        },
+      }),
+      // Get completed today
+      prisma.walkIn.findMany({
+        where: {
+          status: "done",
+          createdAt: { gte: todayStart },
+        },
+        select: {
+          id: true,
+          service: true,
+          staffId: true,
+          startedAt: true,
+          completedAt: true,
+        },
+      }),
+      // Get in-progress
+      prisma.walkIn.findMany({
+        where: {
+          status: "in-progress",
+        },
+        select: {
+          id: true,
+          staffId: true,
+          customerName: true,
+          service: true,
+        },
+        orderBy: { startedAt: "asc" },
+      }),
+      // Get waiting
+      prisma.walkIn.findMany({
+        where: {
+          status: "waiting",
+        },
+        select: {
+          id: true,
+          createdAt: true,
+          customerName: true,
+          service: true,
+        },
         orderBy: { createdAt: "asc" },
       }),
       prisma.service.findMany({
         where: { isActive: true },
+        select: {
+          id: true,
+          name: true,
+          price: true,
+        },
       }),
       prisma.staff.findMany({
         where: { isActive: true },
+        select: {
+          id: true,
+          name: true,
+        },
       }),
     ]);
-
-    // Calculate KPIs
-    const todayWalkIns = walkIns.filter((w) => w.createdAt >= todayStart);
-    const completedToday = todayWalkIns.filter((w) => w.status === "done");
-    const inProgressToday = walkIns.filter((w) => w.status === "in-progress");
-    const waitingWalkIns = walkIns.filter((w) => w.status === "waiting");
 
     // Calculate average wait time
     const avgWaitTime =
@@ -44,7 +112,7 @@ export async function GET() {
 
     // Calculate staff active (staff currently working on a walk-in)
     const staffActive = staff.filter((s) =>
-      walkIns.some((w) => w.staffId === s.id && w.status === "in-progress")
+      inProgressToday.some((w) => w.staffId === s.id)
     ).length;
 
     // Calculate total revenue today
@@ -75,7 +143,7 @@ export async function GET() {
 
     // Insight 2: Peak hour prediction
     const currentHour = new Date().getHours();
-    const hourlyBookings = walkIns.reduce(
+    const hourlyBookings = allWalkIns.reduce(
       (acc, w) => {
         const hour = w.createdAt.getHours();
         acc[hour] = (acc[hour] || 0) + 1;
@@ -118,7 +186,7 @@ export async function GET() {
     const yesterdayEnd = new Date(yesterdayStart);
     yesterdayEnd.setHours(23, 59, 59, 999);
 
-    const yesterdayRevenue = walkIns
+    const yesterdayRevenue = allWalkIns
       .filter(
         (w) =>
           w.status === "done" &&
@@ -276,7 +344,7 @@ export async function GET() {
       .slice(0, 5); // Top 5 total
 
     // Queue status
-    const inProgressWalkIn = walkIns.find((w) => w.status === "in-progress");
+    const inProgressWalkIn = inProgressToday[0];
     const nextWaitingWalkIn = waitingWalkIns[0];
 
     const queueStatus = {
