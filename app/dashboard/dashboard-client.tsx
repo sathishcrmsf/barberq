@@ -259,7 +259,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
