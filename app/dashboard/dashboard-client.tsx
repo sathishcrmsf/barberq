@@ -8,7 +8,6 @@ import Link from "next/link";
 import {
   Users,
   Clock,
-  Menu,
   Eye,
   UserPlus,
   BarChart3,
@@ -23,6 +22,7 @@ import {
 import { MiniStatCard } from "@/components/ui/mini-stat-card";
 import { PremiumActionCard } from "@/components/ui/premium-action-card";
 import { SideDrawer } from "@/components/ui/side-drawer";
+import { MenuButton } from "./menu-button";
 
 interface DashboardData {
   kpis: {
@@ -61,6 +61,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
   const [data, setData] = useState<DashboardData>(initialData);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+
   // Auto-refresh every 30 seconds (non-blocking, updates in background)
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -83,28 +84,12 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
       {/* Side Drawer */}
       <SideDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
-
-      {/* ===== SECTION 1: HEADER ===== */}
-      <header className="sticky top-0 z-30 bg-white border-b border-gray-200 px-5 py-4 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-black">BarberQ</h1>
-            <p className="text-xs text-gray-600 mt-0.5">
-              Queue Management System
-            </p>
-          </div>
-          <button
-            onClick={() => setDrawerOpen(true)}
-            className="p-2.5 hover:bg-gray-100 rounded-xl transition-colors active:scale-95"
-            aria-label="Open menu"
-          >
-            <Menu className="w-6 h-6 text-gray-900" />
-          </button>
-        </div>
-      </header>
+      
+      {/* Menu Button - hydrates after initial render */}
+      <MenuButton onOpen={() => setDrawerOpen(true)} />
 
       <div className="p-5 space-y-5 pb-32">
         {/* ===== SECTION 2: TODAY'S OVERVIEW (3 STAT CARDS) ===== */}

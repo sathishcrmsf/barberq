@@ -2,7 +2,6 @@
 // This renders on the server for better performance
 
 import { prisma } from "@/lib/prisma";
-import { getTopInsights } from "@/lib/insights";
 import { DashboardClient } from "./dashboard-client";
 
 async function fetchDashboardData() {
@@ -10,44 +9,9 @@ async function fetchDashboardData() {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
-  // Only fetch recent walk-ins (last 7 days) for insights to improve performance
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  sevenDaysAgo.setHours(0, 0, 0, 0);
-
-  // Fetch data in parallel with optimized queries
-  const [recentWalkIns, todayWalkIns, completedToday, inProgressToday, waitingWalkIns, services, staff] = await Promise.all([
-    // Get recent walk-ins for insights (last 7 days only)
-    prisma.walkIn.findMany({
-      where: {
-        createdAt: { gte: sevenDaysAgo },
-      },
-      select: {
-        id: true,
-        status: true,
-        createdAt: true,
-        startedAt: true,
-        completedAt: true,
-        service: true,
-        staffId: true,
-      },
-      orderBy: { createdAt: "asc" },
-    }),
-    // Get today's walk-ins only
-    prisma.walkIn.findMany({
-      where: {
-        createdAt: { gte: todayStart },
-      },
-      select: {
-        id: true,
-        status: true,
-        createdAt: true,
-        startedAt: true,
-        completedAt: true,
-        service: true,
-        staffId: true,
-      },
-    }),
+  // Fetch only essential data in parallel - optimized for speed
+  // Skip historical data - only fetch what's needed for dashboard
+  const [completedToday, inProgressToday, waitingWalkIns, services, staff] = await Promise.all([
     // Get completed today
     prisma.walkIn.findMany({
       where: {
@@ -154,32 +118,15 @@ async function fetchDashboardData() {
     });
   }
 
-  // Get smart insights with timeout (non-blocking)
-  let smartInsights: Array<{
+  // Skip smart insights for initial load - they're non-critical and slow
+  // Can be loaded client-side after initial render if needed
+  const smartInsights: Array<{
     id: string;
     emoji: string;
     title: string;
     value: string;
     priority: number;
   }> = [];
-
-  try {
-    const insightsPromise = getTopInsights(5);
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Timeout")), 1000)
-    );
-    
-    const topSmartInsights = await Promise.race([insightsPromise, timeoutPromise]);
-    smartInsights = topSmartInsights.map((insight) => ({
-      id: insight.id,
-      emoji: insight.emoji,
-      title: insight.title,
-      value: insight.value.toString(),
-      priority: insight.priority,
-    }));
-  } catch (error) {
-    // Silently fail - dashboard should still load
-  }
 
   const allInsights = [...insights, ...smartInsights]
     .sort((a, b) => a.priority - b.priority)
