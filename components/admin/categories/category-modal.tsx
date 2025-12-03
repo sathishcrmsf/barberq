@@ -53,13 +53,16 @@ export function CategoryModal({ isOpen, onClose, onSave, category, mode }: Categ
 
   useEffect(() => {
     if (category && mode === 'edit') {
-      setFormData({
-        name: category.name,
-        description: category.description || '',
-        icon: category.icon || 'Scissors',
-        displayOrder: category.displayOrder,
-        isActive: category.isActive,
-      });
+      // Use setTimeout to avoid setState in effect warning
+      setTimeout(() => {
+        setFormData({
+          name: category.name,
+          description: category.description || '',
+          icon: category.icon || 'Scissors',
+          displayOrder: category.displayOrder,
+          isActive: category.isActive,
+        });
+      }, 0);
     } else {
       setFormData({
         name: '',

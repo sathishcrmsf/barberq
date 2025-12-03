@@ -35,7 +35,6 @@ interface Staff {
 }
 
 export default function StaffPage() {
-  const router = useRouter();
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -72,8 +71,9 @@ export default function StaffPage() {
 
       toast.success('Staff member deleted');
       fetchStaff();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to delete staff member');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete staff member';
+      toast.error(errorMessage);
     }
   }
 
@@ -89,7 +89,7 @@ export default function StaffPage() {
 
       toast.success(member.isActive ? 'Staff deactivated' : 'Staff activated');
       fetchStaff();
-    } catch (error) {
+    } catch {
       toast.error('Failed to update staff');
     }
   }

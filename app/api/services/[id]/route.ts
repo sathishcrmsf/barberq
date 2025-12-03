@@ -65,7 +65,7 @@ export async function PATCH(
     const { staffIds, ...serviceData } = validated;
 
     // Update service
-    const updatedService = await prisma.service.update({
+    await prisma.service.update({
       where: { id },
       data: serviceData,
       include: {

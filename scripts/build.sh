@@ -1,20 +1,18 @@
 #!/bin/bash
 set -e
 
-# Generate Prisma Client
+# Generate Prisma Client (required for build)
 npx prisma generate
 
-# Resolve failed migrations (ignore errors if already resolved)
-npx prisma migrate resolve --rolled-back 20251125050237_add_barber_and_started_at 2>/dev/null || true
-npx prisma migrate resolve --rolled-back 20251125120000_init_postgresql 2>/dev/null || true
+# Try to run migrations, but don't fail the build if database is unreachable
+# Migrations will be handled at runtime or via separate deployment step
+if npx prisma migrate deploy 2>/dev/null; then
+  echo "✓ Migrations deployed successfully"
+else
+  echo "⚠ Migration deployment skipped (database may be unreachable during build)"
+  echo "  Migrations will be handled at runtime or via post-deploy script"
+fi
 
-# Mark migration as applied if column already exists (handles case where migration partially applied)
-# This checks if barberName column exists and marks the migration as applied
-npx prisma migrate resolve --applied 20251125050237_add_barber_and_started_at 2>/dev/null || true
-
-# Try to deploy migrations, fallback to db push
-npx prisma migrate deploy || npx prisma db push --accept-data-loss --skip-generate
-
-# Build Next.js
+# Build Next.js (this is the critical step)
 next build
 

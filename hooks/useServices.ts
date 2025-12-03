@@ -1,7 +1,7 @@
 // @cursor: Custom hook for managing service data and operations
 // Provides centralized service state management with CRUD operations
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 
 export interface Service {
@@ -53,6 +53,12 @@ export function useServices() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<{ [key: string]: boolean }>({});
+  const servicesRef = useRef<Service[]>([]);
+  
+  // Keep ref in sync with state
+  useEffect(() => {
+    servicesRef.current = services;
+  }, [services]);
 
   const fetchServices = useCallback(async () => {
     try {
@@ -139,7 +145,9 @@ export function useServices() {
 
   const updateService = useCallback(async (id: string, data: Partial<ServiceFormData>) => {
     const loadingKey = `update-${id}`;
-    const previousServices = [...services];
+    
+    // Capture previous state for rollback
+    const previousServices = [...servicesRef.current];
     
     // Optimistic update
     setServices(prev => prev.map(service => 
@@ -190,7 +198,7 @@ export function useServices() {
         return next;
       });
     }
-  }, [services]);
+  }, []);
 
   const deleteService = useCallback(async (id: string, name: string) => {
     if (!confirm(`Are you sure you want to delete "${name}"?`)) {
@@ -198,11 +206,13 @@ export function useServices() {
     }
 
     const loadingKey = `delete-${id}`;
-    const previousServices = [...services];
-    const serviceToDelete = services.find(s => s.id === id);
-
+    
+    // Capture previous state for rollback
+    const previousServices = [...servicesRef.current];
+    
     // Optimistic update - remove from list immediately
     setServices(prev => prev.filter(service => service.id !== id));
+    
     setActionLoading(prev => ({ ...prev, [loadingKey]: true }));
 
     try {
@@ -238,7 +248,7 @@ export function useServices() {
         return next;
       });
     }
-  }, [services]);
+  }, []);
 
   const toggleServiceStatus = useCallback(async (id: string, currentStatus: boolean) => {
     const loadingKey = `toggle-${id}`;

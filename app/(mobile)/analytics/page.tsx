@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -49,11 +49,7 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'7' | '30' | '90'>('30');
 
-  useEffect(() => {
-    fetchAnalytics();
-  }, [period]);
-
-  async function fetchAnalytics() {
+  const fetchAnalytics = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/analytics/services?period=${period}`);
@@ -66,7 +62,11 @@ export default function AnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [period]);
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [fetchAnalytics]);
 
   if (loading) {
     return (

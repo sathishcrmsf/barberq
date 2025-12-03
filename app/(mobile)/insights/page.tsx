@@ -32,7 +32,7 @@ interface Insight {
   actionable?: boolean;
   actionLabel?: string;
   actionUrl?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 interface InsightsData {

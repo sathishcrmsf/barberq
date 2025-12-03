@@ -92,8 +92,9 @@ export default function EditCategoryPage() {
           displayOrder: data.displayOrder,
           isActive: data.isActive
         });
-      } catch (error: any) {
-        toast.error(error.message || 'Failed to load category');
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to load category';
+        toast.error(errorMessage);
         router.push('/categories');
       } finally {
         setFetching(false);
@@ -123,8 +124,9 @@ export default function EditCategoryPage() {
 
       toast.success('Category updated successfully');
       router.push('/categories');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to update category');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update category';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

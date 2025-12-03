@@ -18,8 +18,6 @@ export default function ServicesPageNew() {
   const router = useRouter();
   const {
     services,
-    activeServices,
-    inactiveServices,
     loading,
     actionLoading,
     deleteService,
@@ -28,10 +26,8 @@ export default function ServicesPageNew() {
   } = useServices();
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [editingService, setEditingService] = useState<Service | null>(null);
 
   const handleCreate = () => {
-    setEditingService(null);
     setIsDrawerOpen(true);
   };
 

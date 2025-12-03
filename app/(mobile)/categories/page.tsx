@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useCategories, Category } from '@/hooks/useCategories';
+import { useCategories, Category, CategoryFormData } from '@/hooks/useCategories';
 import { CategoryModal } from '@/components/admin/categories/category-modal';
 import { EmptyState } from '@/components/shared/empty-state';
 import { SkeletonCard } from '@/components/shared/skeleton';
@@ -15,12 +15,12 @@ import { CategoryBadge } from '@/components/ui/category-badge';
 import { Toggle } from '@/components/ui/toggle';
 import { 
   FolderOpen, Plus, Edit, Trash2,
-  Sparkles, Tag, GripVertical
+  Sparkles, Tag, GripVertical,
+  type LucideIcon
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 // Map icon names to components
-const ICON_MAP: Record<string, any> = {
+const ICON_MAP: Record<string, LucideIcon> = {
   Scissors: Tag,
   Palette: Tag,
   Sparkles,
@@ -68,7 +68,7 @@ export default function CategoriesPageNew() {
     setIsModalOpen(true);
   };
 
-  const handleSave = async (formData: any) => {
+  const handleSave = async (formData: CategoryFormData) => {
     if (modalMode === 'create') {
       const result = await createCategory(formData);
       if (result) {
@@ -297,7 +297,7 @@ export default function CategoriesPageNew() {
                   </p>
                   <p className="text-sm text-blue-800">
                     Organize similar services together. Good category structure helps clients 
-                    find what they're looking for faster. Drag-and-drop reordering coming soon!
+                    find what they&apos;re looking for faster. Drag-and-drop reordering coming soon!
                   </p>
                 </div>
               </div>

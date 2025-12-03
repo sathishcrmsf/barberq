@@ -12,9 +12,6 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:fix-status": "tsx scripts/fix-status-migration.ts"
   },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  },
   "dependencies": {
     "@prisma/client": "^6.19.0",
     "@radix-ui/react-select": "^2.2.6",

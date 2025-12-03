@@ -14,8 +14,6 @@ import {
   ArrowLeft, 
   Search, 
   Plus, 
-  History, 
-  Star,
   TrendingUp,
   Users,
   DollarSign,
@@ -153,7 +151,7 @@ export default function CustomersPage() {
   // Initial load and when filters change
   useEffect(() => {
     fetchCustomers(1, false);
-  }, [debouncedSearch, sortBy, sortOrder]);
+  }, [fetchCustomers]);
 
   // Infinite scroll observer
   useEffect(() => {

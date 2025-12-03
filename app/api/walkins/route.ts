@@ -16,7 +16,7 @@ const walkInSchema = z.object({
   notes: z.string().optional(),
 });
 
-const statusSchema = z.enum(["waiting", "in-progress", "done"]);
+// const statusSchema = z.enum(["waiting", "in-progress", "done"]); // Unused, kept for reference
 
 // GET /api/walkins - Get all walk-ins
 export async function GET() {

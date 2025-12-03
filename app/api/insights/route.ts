@@ -9,7 +9,6 @@ import {
   getTopInsights,
   getInsightsByCategory,
   InsightCategory,
-  BaseInsight,
 } from "@/lib/insights";
 
 export async function GET(request: NextRequest) {

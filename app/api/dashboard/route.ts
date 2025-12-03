@@ -6,127 +6,38 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getTopInsights } from "@/lib/insights";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    // Check database connection first
-    try {
-      await prisma.$connect();
-    } catch (dbError) {
-      console.error("Database connection failed:", dbError);
-      return NextResponse.json(
-        { 
-          error: "Database connection failed. Please check your DATABASE_URL environment variable.",
-          details: process.env.NODE_ENV === "development" 
-            ? (dbError instanceof Error ? dbError.message : String(dbError))
-            : undefined
-        },
-        { status: 500 }
-      );
-    }
-
-    // Parse query parameters for filters
-    const { searchParams } = new URL(request.url);
-    let dateRange = searchParams.get("dateRange") || "today";
-    
-    // Validate and sanitize dateRange parameter
-    // Handle cases like "today:1" by extracting just the base value
-    if (dateRange.includes(":")) {
-      dateRange = dateRange.split(":")[0];
-    }
-    
-    // Ensure dateRange is one of the valid values
-    if (!["today", "week", "month"].includes(dateRange)) {
-      dateRange = "today";
-    }
-    
-    const staffId = searchParams.get("staffId");
-    const serviceName = searchParams.get("serviceName");
-
-    // Calculate date range
-    const now = new Date();
-    let startDate = new Date();
-    startDate.setHours(0, 0, 0, 0);
-
-    if (dateRange === "week") {
-      startDate.setDate(startDate.getDate() - 7);
-    } else if (dateRange === "month") {
-      startDate.setMonth(startDate.getMonth() - 1);
-    }
-    // "today" is already set above
-
-    // Fetch all necessary data in parallel
-    let walkIns: Awaited<ReturnType<typeof prisma.walkIn.findMany>> = [];
-    let services: Awaited<ReturnType<typeof prisma.service.findMany>> = [];
-    let staff: Awaited<ReturnType<typeof prisma.staff.findMany>> = [];
-    
-    try {
-      const results = await Promise.all([
-        prisma.walkIn.findMany({
-          orderBy: { createdAt: "asc" },
-          include: {
-            customer: true,
-          },
-        }).catch((err) => {
-          console.error("Error fetching walkIns:", err);
-          return [];
-        }),
-        prisma.service.findMany({
-          where: { isActive: true },
-        }).catch((err) => {
-          console.error("Error fetching services:", err);
-          return [];
-        }),
-        prisma.staff.findMany({
-          where: { isActive: true },
-        }).catch((err) => {
-          console.error("Error fetching staff:", err);
-          return [];
-        }),
-      ]);
-      
-      walkIns = results[0] || [];
-      services = results[1] || [];
-      staff = results[2] || [];
-    } catch (dbError) {
-      console.error("Database query error:", dbError);
-      console.error("Error stack:", dbError instanceof Error ? dbError.stack : "No stack");
-      // Return empty arrays instead of throwing to allow partial data
-      walkIns = [];
-      services = [];
-      staff = [];
-    }
-
-    // Apply filters
-    let filteredWalkIns = walkIns.filter((w) => {
-      if (!w.createdAt) return false;
-      return w.createdAt >= startDate;
-    });
-    if (staffId) {
-      filteredWalkIns = filteredWalkIns.filter((w) => w.staffId === staffId);
-    }
-    if (serviceName) {
-      filteredWalkIns = filteredWalkIns.filter((w) => w.service === serviceName);
-    }
-
-    // Calculate KPIs based on filtered data
+    // Get today's start time
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
-    const todayWalkIns = filteredWalkIns.filter((w) => {
-      if (!w.createdAt) return false;
-      return w.createdAt >= todayStart;
-    });
+
+    // Fetch all necessary data in parallel
+    const [walkIns, services, staff] = await Promise.all([
+      prisma.walkIn.findMany({
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.service.findMany({
+        where: { isActive: true },
+      }),
+      prisma.staff.findMany({
+        where: { isActive: true },
+      }),
+    ]);
+
+    // Calculate KPIs
+    const todayWalkIns = walkIns.filter((w) => w.createdAt >= todayStart);
     const completedToday = todayWalkIns.filter((w) => w.status === "done");
-    const inProgressToday = filteredWalkIns.filter((w) => w.status === "in-progress");
-    const waitingWalkIns = filteredWalkIns.filter((w) => w.status === "waiting");
+    const inProgressToday = walkIns.filter((w) => w.status === "in-progress");
+    const waitingWalkIns = walkIns.filter((w) => w.status === "waiting");
 
     // Calculate average wait time
     const avgWaitTime =
       waitingWalkIns.length > 0
         ? Math.round(
             waitingWalkIns.reduce((sum, w) => {
-              if (!w.createdAt) return sum;
               const waitMinutes = (Date.now() - w.createdAt.getTime()) / 60000;
-              return sum + (waitMinutes > 0 ? waitMinutes : 0);
+              return sum + waitMinutes;
             }, 0) / waitingWalkIns.length
           )
         : 0;
@@ -134,11 +45,10 @@ export async function GET(request: Request) {
     // Calculate staff active (staff currently working on a walk-in)
     const staffActive = staff.filter((s) =>
       walkIns.some((w) => w.staffId === s.id && w.status === "in-progress")
-    ).length || 0;
+    ).length;
 
     // Calculate total revenue today
     const revenueToday = completedToday.reduce((sum, w) => {
-      if (!w.service) return sum;
       const service = services.find((s) => s.name === w.service);
       return sum + (service?.price || 0);
     }, 0);
@@ -167,7 +77,6 @@ export async function GET(request: Request) {
     const currentHour = new Date().getHours();
     const hourlyBookings = walkIns.reduce(
       (acc, w) => {
-        if (!w.createdAt) return acc;
         const hour = w.createdAt.getHours();
         acc[hour] = (acc[hour] || 0) + 1;
         return acc;
@@ -218,7 +127,6 @@ export async function GET(request: Request) {
           w.completedAt <= yesterdayEnd
       )
       .reduce((sum, w) => {
-        if (!w.service) return sum;
         const service = services.find((s) => s.name === w.service);
         return sum + (service?.price || 0);
       }, 0);
@@ -247,7 +155,6 @@ export async function GET(request: Request) {
     // Insight 4: Top service today
     const serviceCounts = todayWalkIns.reduce(
       (acc, w) => {
-        if (!w.service) return acc;
         acc[w.service] = (acc[w.service] || 0) + 1;
         return acc;
       },
@@ -272,17 +179,15 @@ export async function GET(request: Request) {
     const staffPerformance = staff
       .map((s) => {
         const staffCompleted = completedToday.filter((w) => w.staffId === s.id);
-        const avgCompletionTime = staffCompleted.length > 0
-          ? staffCompleted
-              .filter((w) => w.startedAt && w.completedAt)
-              .reduce((sum, w) => {
-                if (w.startedAt && w.completedAt) {
-                  const duration = (w.completedAt.getTime() - w.startedAt.getTime()) / 60000;
-                  return sum + (duration > 0 ? duration : 0);
-                }
-                return sum;
-              }, 0) / (staffCompleted.filter((w) => w.startedAt && w.completedAt).length || 1)
-          : 0;
+        const avgCompletionTime = staffCompleted
+          .filter((w) => w.startedAt && w.completedAt)
+          .reduce((sum, w) => {
+            if (w.startedAt && w.completedAt) {
+              const duration = (w.completedAt.getTime() - w.startedAt.getTime()) / 60000;
+              return sum + duration;
+            }
+            return sum;
+          }, 0) / (staffCompleted.length || 1);
 
         return {
           name: s.name,
@@ -352,26 +257,17 @@ export async function GET(request: Request) {
     }> = [];
 
     try {
-      // Add timeout to prevent hanging
-      const insightsPromise = getTopInsights(5);
-      const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error("Insights timeout after 5 seconds")), 5000)
-      );
-      
-      const topSmartInsights = await Promise.race([insightsPromise, timeoutPromise]);
+      const topSmartInsights = await getTopInsights(5);
       smartInsights = topSmartInsights.map((insight) => ({
-        id: insight.id || `insight-${Date.now()}`,
-        emoji: insight.emoji || "ℹ️",
-        title: insight.title || "Insight",
-        value: insight.value?.toString() || "N/A",
-        priority: insight.priority || 5,
+        id: insight.id,
+        emoji: insight.emoji,
+        title: insight.title,
+        value: insight.value.toString(),
+        priority: insight.priority,
       }));
     } catch (error) {
       console.error("Error fetching smart insights:", error);
-      console.error("Error details:", error instanceof Error ? error.message : String(error));
-      console.error("Stack trace:", error instanceof Error ? error.stack : "No stack trace");
-      // Continue without smart insights if there's an error - this is not critical
-      smartInsights = [];
+      // Continue without smart insights if there's an error
     }
 
     // Merge insights: prioritize existing real-time insights, then add smart insights
@@ -384,23 +280,23 @@ export async function GET(request: Request) {
     const nextWaitingWalkIn = waitingWalkIns[0];
 
     const queueStatus = {
-      nowServing: inProgressWalkIn && inProgressWalkIn.customerName
+      nowServing: inProgressWalkIn
         ? {
-            customerName: inProgressWalkIn.customerName || "Unknown",
-            service: inProgressWalkIn.service || "Unknown",
+            customerName: inProgressWalkIn.customerName,
+            service: inProgressWalkIn.service,
           }
         : undefined,
-      nextUp: nextWaitingWalkIn && nextWaitingWalkIn.customerName
+      nextUp: nextWaitingWalkIn
         ? {
-            customerName: nextWaitingWalkIn.customerName || "Unknown",
-            service: nextWaitingWalkIn.service || "Unknown",
+            customerName: nextWaitingWalkIn.customerName,
+            service: nextWaitingWalkIn.service,
           }
         : undefined,
       estimatedWait: avgWaitTime,
       queueCount: waitingWalkIns.length,
     };
 
-    // Return all dashboard data including staff and services for filters
+    // Return all dashboard data
     return NextResponse.json(
       {
         kpis: {
@@ -412,27 +308,24 @@ export async function GET(request: Request) {
         },
         insights: allInsights,
         queueStatus,
-        staff: staff.map((s) => ({ id: s.id, name: s.name })),
-        services: services.map((s) => ({ name: s.name })),
       },
       { status: 200 }
     );
   } catch (error) {
     console.error("Error fetching dashboard data:", error);
-    console.error("Error details:", error instanceof Error ? error.message : String(error));
-    console.error("Stack trace:", error instanceof Error ? error.stack : "No stack trace");
     
-    // Return more detailed error in development, generic in production
-    const errorMessage = process.env.NODE_ENV === "development" 
-      ? (error instanceof Error ? error.message : "Unknown error")
-      : "Failed to fetch dashboard data";
+    // Provide more detailed error information
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const isDatabaseError = errorMessage.includes("Can't reach database") || 
+                            errorMessage.includes("database server") ||
+                            errorMessage.includes("P1001");
     
     return NextResponse.json(
       { 
-        error: errorMessage,
-        ...(process.env.NODE_ENV === "development" && {
-          stack: error instanceof Error ? error.stack : undefined
-        })
+        error: "Failed to fetch dashboard data",
+        details: isDatabaseError 
+          ? "Database connection failed. Please check your database is active and connection string is correct."
+          : errorMessage
       },
       { status: 500 }
     );

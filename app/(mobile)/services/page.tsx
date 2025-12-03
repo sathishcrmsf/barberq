@@ -19,8 +19,6 @@ export default function ServicesPageNew() {
   const router = useRouter();
   const {
     services,
-    activeServices,
-    inactiveServices,
     loading,
     actionLoading,
     deleteService,
@@ -55,7 +53,7 @@ export default function ServicesPageNew() {
   };
 
   // Calculate stats
-  const totalRevenue = services.reduce((sum, s) => sum + s.price, 0);
+  // const totalRevenue = services.reduce((sum, s) => sum + s.price, 0);
   const servicesWithCategories = services.filter(s => s.category !== null);
   const uniqueCategoriesCount = new Set(servicesWithCategories.map(s => s.category?.id)).size;
 

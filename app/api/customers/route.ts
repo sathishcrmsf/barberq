@@ -134,12 +134,12 @@ export async function GET(request: NextRequest) {
 
     // Build orderBy clause
     // Note: For visits, LTV, and lastVisit, we'll sort in-memory after calculation
-    let orderBy: any = {};
+    let orderBy: Record<string, 'asc' | 'desc'> = {};
     if (sortBy === "visits" || sortBy === "ltv" || sortBy === "lastVisit") {
       // Sort by name first, then we'll re-sort in-memory
-      orderBy = { name: "asc" };
+      orderBy = { name: "asc" as const };
     } else {
-      orderBy = { [sortBy]: sortOrder };
+      orderBy = { [sortBy]: sortOrder as 'asc' | 'desc' };
     }
 
     // Get total count for pagination

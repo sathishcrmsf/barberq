@@ -165,8 +165,7 @@ function AddPageContent() {
       // Auto-lookup customer if phone is provided
       handlePhoneLookup(phoneParam);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, [searchParams]); // handlePhoneLookup is stable, no need to include
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

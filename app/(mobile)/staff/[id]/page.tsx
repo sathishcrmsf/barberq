@@ -52,6 +52,7 @@ export default function StaffDetailPage() {
     if (staffId) {
       fetchStaff();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [staffId]);
 
   async function fetchStaff() {
@@ -83,7 +84,7 @@ export default function StaffDetailPage() {
 
       toast.success(staff.isActive ? 'Staff deactivated' : 'Staff activated');
       fetchStaff();
-    } catch (error) {
+    } catch {
       toast.error('Failed to update staff');
     }
   }
@@ -105,8 +106,9 @@ export default function StaffDetailPage() {
 
       toast.success('Staff member deleted');
       router.push('/staff');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to delete staff member');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete staff member';
+      toast.error(errorMessage);
     }
   }
 

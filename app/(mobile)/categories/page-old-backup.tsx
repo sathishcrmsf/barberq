@@ -31,8 +31,10 @@ import {
   FolderOpen
 } from 'lucide-react';
 
+import { type LucideIcon } from 'lucide-react';
+
 // Map icon names to components
-const ICON_MAP: Record<string, any> = {
+const ICON_MAP: Record<string, LucideIcon> = {
   Scissors,
   Palette,
   Sparkles,
@@ -101,8 +103,9 @@ export default function CategoriesPage() {
 
       toast.success('Category deleted');
       fetchCategories();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to delete category');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete category';
+      toast.error(errorMessage);
     }
   }
 
