@@ -13,9 +13,17 @@ export async function GET() {
     todayStart.setHours(0, 0, 0, 0);
 
     // Fetch data in parallel with optimized queries (filter in database, not in memory)
-    const [allWalkIns, todayWalkIns, completedToday, inProgressToday, waitingWalkIns, services, staff] = await Promise.all([
-      // Get all walk-ins for insights (only if needed)
+    // Only fetch recent walk-ins (last 7 days) for insights to improve performance
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    const [recentWalkIns, todayWalkIns, completedToday, inProgressToday, waitingWalkIns, services, staff] = await Promise.all([
+      // Get recent walk-ins for insights (last 7 days only - much faster)
       prisma.walkIn.findMany({
+        where: {
+          createdAt: { gte: sevenDaysAgo },
+        },
         select: {
           id: true,
           status: true,
@@ -141,9 +149,9 @@ export async function GET() {
       });
     }
 
-    // Insight 2: Peak hour prediction
+    // Insight 2: Peak hour prediction (using recent data)
     const currentHour = new Date().getHours();
-    const hourlyBookings = allWalkIns.reduce(
+    const hourlyBookings = recentWalkIns.reduce(
       (acc, w) => {
         const hour = w.createdAt.getHours();
         acc[hour] = (acc[hour] || 0) + 1;
@@ -186,7 +194,8 @@ export async function GET() {
     const yesterdayEnd = new Date(yesterdayStart);
     yesterdayEnd.setHours(23, 59, 59, 999);
 
-    const yesterdayRevenue = allWalkIns
+    // Get yesterday's revenue from recent walk-ins (more efficient)
+    const yesterdayRevenue = recentWalkIns
       .filter(
         (w) =>
           w.status === "done" &&
@@ -315,7 +324,7 @@ export async function GET() {
     // Sort by priority and take top 3
     const sortedInsights = insights.sort((a, b) => a.priority - b.priority).slice(0, 3);
 
-    // Get smart insights from the insights system
+    // Get smart insights from the insights system (with timeout to prevent blocking)
     let smartInsights: Array<{
       id: string;
       emoji: string;
@@ -325,7 +334,13 @@ export async function GET() {
     }> = [];
 
     try {
-      const topSmartInsights = await getTopInsights(5);
+      // Use Promise.race to timeout after 1 second - don't block dashboard load
+      const insightsPromise = getTopInsights(5);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout")), 1000)
+      );
+      
+      const topSmartInsights = await Promise.race([insightsPromise, timeoutPromise]);
       smartInsights = topSmartInsights.map((insight) => ({
         id: insight.id,
         emoji: insight.emoji,
@@ -334,8 +349,8 @@ export async function GET() {
         priority: insight.priority,
       }));
     } catch (error) {
-      console.error("Error fetching smart insights:", error);
-      // Continue without smart insights if there's an error
+      // Silently fail - dashboard should still load without smart insights
+      // This prevents slow insights from blocking the entire dashboard
     }
 
     // Merge insights: prioritize existing real-time insights, then add smart insights
