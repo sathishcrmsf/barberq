@@ -136,17 +136,25 @@ export default function InsightsPage() {
     }
   }
 
-  if (loading) {
+  // Show loading state immediately with skeleton
+  if (loading && !data) {
     return (
       <div className="min-h-screen bg-gray-50 pb-32">
         <div className="sticky top-0 z-10 bg-white border-b shadow-sm">
           <div className="flex items-center justify-between px-4 py-3">
-            <h1 className="text-xl font-bold">Smart Insights</h1>
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="sm" onClick={() => window.history.back()}>
+                ← Back
+              </Button>
+              <h1 className="text-xl font-bold">Smart Insights</h1>
+            </div>
           </div>
         </div>
         <div className="p-4">
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-24 bg-gray-200 rounded-lg animate-pulse"></div>
+            ))}
           </div>
         </div>
       </div>
@@ -237,7 +245,7 @@ export default function InsightsPage() {
                           <div className="flex items-center justify-between">
                             <div className="text-lg font-bold text-gray-900">
                               {typeof insight.value === "number"
-                                ? `$${insight.value.toFixed(0)}`
+                                ? `₹${insight.value.toFixed(0)}`
                                 : insight.value}
                             </div>
                             {insight.actionable && insight.actionUrl && (

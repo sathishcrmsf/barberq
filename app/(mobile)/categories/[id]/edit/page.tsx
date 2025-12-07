@@ -55,7 +55,7 @@ interface Category {
   displayOrder: number;
   isActive: boolean;
   _count?: {
-    services: number;
+    Service: number;
   };
 }
 
@@ -281,8 +281,8 @@ export default function EditCategoryPage() {
             <Card className="p-4 bg-yellow-50 border-yellow-200">
               <div className="text-sm font-semibold mb-1">Category Info</div>
               <p className="text-xs text-yellow-800">
-                This category currently has <strong>{category._count.services}</strong> service{category._count.services !== 1 ? 's' : ''} assigned to it.
-                {category._count.services > 0 && ' Changes will affect service organization.'}
+                This category currently has <strong>{category._count.Service}</strong> service{category._count.Service !== 1 ? 's' : ''} assigned to it.
+                {category._count.Service > 0 && ' Changes will affect service organization.'}
               </p>
             </Card>
           )}

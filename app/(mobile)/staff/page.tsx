@@ -21,16 +21,16 @@ interface Staff {
   bio?: string;
   displayOrder: number;
   isActive: boolean;
-  staffServices: Array<{
+  StaffService: Array<{
     isPrimary: boolean;
-    service: {
+    Service: {
       id: string;
       name: string;
     };
   }>;
   _count: {
-    staffServices: number;
-    walkIns: number;
+    StaffService: number;
+    WalkIn: number;
   };
 }
 
@@ -44,13 +44,34 @@ export default function StaffPage() {
 
   async function fetchStaff() {
     try {
-      const res = await fetch('/api/staff');
-      if (!res.ok) throw new Error('Failed to fetch');
+      const res = await fetch('/api/staff', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        const errorMessage = errorData.error || `Failed to fetch (${res.status})`;
+        const errorDetails = errorData.details || '';
+        throw new Error(errorDetails ? `${errorMessage}: ${errorDetails}` : errorMessage);
+      }
+      
       const data = await res.json();
       setStaff(data);
     } catch (error) {
       console.error('Error fetching staff:', error);
-      toast.error('Failed to load staff');
+      
+      // Handle different types of errors
+      let errorMessage = 'Failed to load staff';
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        errorMessage = 'Network error: Unable to connect to server. Please check if the server is running.';
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -97,7 +118,33 @@ export default function StaffPage() {
   const activeStaff = staff.filter(s => s.isActive);
   const inactiveStaff = staff.filter(s => !s.isActive);
   const primaryService = (member: Staff) => 
-    member.staffServices.find(ss => ss.isPrimary)?.service.name;
+    member.StaffService?.find(ss => ss.isPrimary)?.Service.name;
+
+  // Show loading state immediately
+  if (loading && staff.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-32">
+        <div className="sticky top-0 z-10 bg-white border-b shadow-sm">
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="flex items-center gap-3">
+              <Link href="/dashboard">
+                <Button variant="ghost" size="sm">
+                  ← Back
+                </Button>
+              </Link>
+              <h1 className="text-xl font-bold">Staff</h1>
+            </div>
+          </div>
+        </div>
+        <div className="p-4">
+          <div className="text-center py-8">
+            <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin mx-auto mb-2"></div>
+            <p className="text-gray-500">Loading staff...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-32">
@@ -120,9 +167,7 @@ export default function StaffPage() {
 
       {/* Content */}
       <div className="p-4 pb-24">
-        {loading ? (
-          <div className="text-center py-8 text-gray-500">Loading...</div>
-        ) : staff.length === 0 ? (
+        {staff.length === 0 ? (
           <Card className="p-8 text-center">
             <div className="text-4xl mb-4">👥</div>
             <h3 className="font-semibold mb-2">No Staff Members Yet</h3>
@@ -163,9 +208,9 @@ export default function StaffPage() {
                             </p>
                           )}
                           <div className="flex gap-3 mt-1 text-xs text-gray-500">
-                            <span>{member._count.staffServices} services</span>
+                            <span>{member._count.StaffService} services</span>
                             <span>•</span>
-                            <span>{member._count.walkIns} clients</span>
+                            <span>{member._count.WalkIn} clients</span>
                           </div>
                         </div>
                       </div>

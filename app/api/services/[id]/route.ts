@@ -69,10 +69,10 @@ export async function PATCH(
       where: { id },
       data: serviceData,
       include: {
-        category: true,
-        staffServices: {
+        Category: true,
+        StaffService: {
           include: {
-            staff: true
+            Staff: true
           }
         }
       }
@@ -89,6 +89,7 @@ export async function PATCH(
       if (staffIds.length > 0) {
         await prisma.staffService.createMany({
           data: staffIds.map((staffId) => ({
+            id: crypto.randomUUID(),
             serviceId: id,
             staffId,
             isPrimary: false,
@@ -101,10 +102,10 @@ export async function PATCH(
     const completeService = await prisma.service.findUnique({
       where: { id },
       include: {
-        category: true,
-        staffServices: {
+        Category: true,
+        StaffService: {
           include: {
-            staff: true
+            Staff: true
           }
         }
       }

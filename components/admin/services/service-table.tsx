@@ -335,16 +335,16 @@ export function ServiceTable({
                     <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
                       <div className="flex items-center gap-1.5">
                         <DollarSign className="w-4 h-4 text-gray-400" />
-                        <span className="font-medium text-gray-900">${service.price.toFixed(2)}</span>
+                        <span className="font-medium text-gray-900">₹{service.price.toFixed(2)}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Clock className="w-4 h-4 text-gray-400" />
                         <span>{service.duration} min</span>
                       </div>
-                      {service._count && service._count.staffServices > 0 && (
+                      {service._count && service._count.StaffService > 0 && (
                         <div className="flex items-center gap-1.5">
                           <Users className="w-4 h-4 text-gray-400" />
-                          <span>{service._count.staffServices} staff</span>
+                          <span>{service._count.StaffService} staff</span>
                         </div>
                       )}
                     </div>

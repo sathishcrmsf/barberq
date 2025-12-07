@@ -123,10 +123,18 @@ export async function GET() {
       inProgressToday.some((w) => w.staffId === s.id)
     ).length;
 
-    // Calculate total revenue today
+    // Create a service price map for accurate revenue calculation
+    // Use both exact match and case-insensitive match for robustness
+    const servicePriceMap = new Map(services.map(s => [s.name, s.price]));
+    const servicePriceMapLower = new Map(services.map(s => [s.name.toLowerCase().trim(), s.price]));
+    
+    // Calculate total revenue today from all completed walk-ins
     const revenueToday = completedToday.reduce((sum, w) => {
-      const service = services.find((s) => s.name === w.service);
-      return sum + (service?.price || 0);
+      // Try exact match first, then case-insensitive match
+      const price = servicePriceMap.get(w.service) || 
+                    servicePriceMapLower.get(w.service.toLowerCase().trim()) || 
+                    0;
+      return sum + price;
     }, 0);
 
     // Generate smart insights - more actionable and data-driven
@@ -204,8 +212,11 @@ export async function GET() {
           w.completedAt <= yesterdayEnd
       )
       .reduce((sum, w) => {
-        const service = services.find((s) => s.name === w.service);
-        return sum + (service?.price || 0);
+        // Try exact match first, then case-insensitive match
+        const price = servicePriceMap.get(w.service) || 
+                      servicePriceMapLower.get(w.service.toLowerCase().trim()) || 
+                      0;
+        return sum + price;
       }, 0);
 
     if (yesterdayRevenue > 0) {

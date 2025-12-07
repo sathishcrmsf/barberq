@@ -153,7 +153,7 @@ export function CompletionPopup({
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-white/70">Total Amount</p>
                 <p className="text-2xl font-bold text-white">
-                  ${amount.toFixed(2)}
+                  ₹{amount.toFixed(2)}
                 </p>
               </div>
             </div>

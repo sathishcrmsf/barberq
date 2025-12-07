@@ -90,6 +90,34 @@ export default function CategoriesPageNew() {
     await toggleCategoryStatus(category.id, category.isActive);
   };
 
+  // Show loading state immediately
+  if (loading && categories.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-32">
+        <div className="sticky top-0 z-10 bg-white border-b shadow-sm">
+          <div className="flex items-center justify-between px-4 py-4">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="sm" onClick={() => router.back()}>
+                ← Back
+              </Button>
+              <div>
+                <h1 className="text-xl font-bold">Categories</h1>
+                <p className="text-sm text-gray-600">Loading...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="p-4">
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 pb-32">
       {/* Header */}
@@ -115,13 +143,7 @@ export default function CategoriesPageNew() {
 
       {/* Content */}
       <div className="p-4 pb-24">
-        {loading ? (
-          <div className="space-y-3">
-            {[...Array(3)].map((_, i) => (
-              <SkeletonCard key={i} />
-            ))}
-          </div>
-        ) : categories.length === 0 ? (
+        {categories.length === 0 ? (
           <EmptyState
             icon={FolderOpen}
             title="No Categories Yet"
@@ -171,7 +193,7 @@ export default function CategoriesPageNew() {
                             )}
                             <div className="flex items-center gap-4 text-sm">
                               <span className="text-gray-500">
-                                {category._count?.services || 0} services
+                                {category._count?.Service || 0} services
                               </span>
                               <span className="text-gray-300">•</span>
                               <span className="text-gray-500">
@@ -251,7 +273,7 @@ export default function CategoriesPageNew() {
                               <CategoryBadge name="Inactive" variant="outline" />
                             </div>
                             <p className="text-sm text-gray-500">
-                              {category._count?.services || 0} services
+                              {category._count?.Service || 0} services
                             </p>
                           </div>
 

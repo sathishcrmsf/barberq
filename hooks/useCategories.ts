@@ -14,7 +14,7 @@ export interface Category {
   createdAt: string;
   updatedAt: string;
   _count?: {
-    services: number;
+    Service: number;
   };
 }
 

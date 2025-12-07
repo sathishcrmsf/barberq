@@ -38,7 +38,7 @@ export async function getCustomerVisitHistory(
       customerId,
     },
     include: {
-      staff: true,
+      Staff: true,
     },
     orderBy: { createdAt: "desc" },
   });
@@ -50,7 +50,7 @@ export async function getCustomerVisitHistory(
     date: w.createdAt,
     service: w.service,
     price: serviceMap.get(w.service)?.price || 0,
-    staffName: w.staff?.name || null,
+    staffName: w.Staff?.name || null,
     status: w.status,
   }));
 

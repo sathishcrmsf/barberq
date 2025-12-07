@@ -42,3 +42,13 @@ export function isValidPhoneFormat(phone: string): boolean {
   const normalized = validateAndNormalizePhone(phone);
   return normalized !== null;
 }
+
+/**
+ * Formats a number as Indian Rupee (INR) currency
+ * @param amount - Amount to format
+ * @param decimals - Number of decimal places (default: 2)
+ * @returns Formatted currency string with ₹ symbol
+ */
+export function formatCurrency(amount: number, decimals: number = 2): string {
+  return `₹${amount.toFixed(decimals)}`;
+}

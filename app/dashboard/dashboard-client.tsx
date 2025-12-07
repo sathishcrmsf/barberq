@@ -100,7 +100,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
           <div className="grid grid-cols-3 gap-3">
             <MiniStatCard
               label="Revenue"
-              value={`$${data.kpis.revenueToday}`}
+              value={`₹${data.kpis.revenueToday}`}
               icon={BarChart3}
               variant="success"
             />

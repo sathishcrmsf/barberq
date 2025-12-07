@@ -57,6 +57,32 @@ export default function ServicesPageNew() {
   const servicesWithCategories = services.filter(s => s.category !== null);
   const uniqueCategoriesCount = new Set(servicesWithCategories.map(s => s.category?.id)).size;
 
+  // Show loading state immediately
+  if (loading && services.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-32">
+        <header className="sticky top-0 z-20 bg-white border-b shadow-sm">
+          <div className="px-4 py-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" size="sm" onClick={() => router.back()}>
+                  ← Back
+                </Button>
+                <div>
+                  <h1 className="text-xl font-bold">Services</h1>
+                  <p className="text-sm text-gray-600">Loading...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+        <div className="p-4">
+          <SkeletonTable />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 pb-32">
       {/* Header */}
@@ -102,9 +128,7 @@ export default function ServicesPageNew() {
 
       {/* Content */}
       <div className="p-4 pb-24">
-        {loading ? (
-          <SkeletonTable />
-        ) : services.length === 0 ? (
+        {services.length === 0 ? (
           <EmptyState
             icon={Scissors}
             title="No Services Yet"

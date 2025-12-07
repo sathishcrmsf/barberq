@@ -192,7 +192,7 @@ export async function identifyBasicServiceOnlyCustomers(): Promise<{
       description: `${customers.length} customers only book basic services`,
       emoji: "💰",
       priority: InsightPriority.MEDIUM,
-      value: `$${totalPotential} potential`,
+      value: `₹${totalPotential} potential`,
       actionable: true,
       actionLabel: "View Customers",
       actionUrl: "/customers?filter=basic-only",

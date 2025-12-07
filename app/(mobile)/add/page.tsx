@@ -8,24 +8,9 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { validateAndNormalizePhone } from "@/lib/utils";
-
-interface Service {
-  id: string;
-  name: string;
-  price: number;
-  duration: number;
-  isActive: boolean;
-}
 
 interface Customer {
   id: string;
@@ -37,36 +22,14 @@ function AddPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
-  const [services, setServices] = useState<Service[]>([]);
-  const [loadingServices, setLoadingServices] = useState(true);
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [foundCustomer, setFoundCustomer] = useState<Customer | null>(null);
   const [formData, setFormData] = useState({
     phone: "",
     name: "",
-    barberName: "",
-    service: "",
     notes: "",
   });
 
-  useEffect(() => {
-    const fetchServices = async () => {
-      try {
-        const response = await fetch("/api/services/active");
-        if (!response.ok) throw new Error("Failed to fetch services");
-        const data = await response.json();
-        setServices(data);
-      } catch (error) {
-        console.error("Failed to load services:", error);
-        // Don't show error toast, just fall back to text input
-      } finally {
-        setLoadingServices(false);
-      }
-    };
-
-    fetchServices();
-  }, []);
 
   // Lookup customer by phone number
   const handlePhoneLookup = async (phone: string) => {
@@ -97,19 +60,34 @@ function AddPageContent() {
       } else {
         // Server error or other unexpected error - log but don't throw
         try {
-          const errorData = await response.json();
-          console.error("Error looking up customer - Full response:", {
-            status: response.status,
-            statusText: response.statusText,
-            error: errorData.error,
-            details: errorData.details,
-            fullError: errorData
-          });
-          
-          // If it's a database initialization error, show a helpful message
-          if (errorData.error?.includes("Database not initialized") || 
-              errorData.error?.includes("Database connection failed")) {
-            console.warn("⚠️ Database setup issue detected. Please restart your dev server and ensure migrations are applied.");
+          // Check if response has content
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json();
+            // Only log if there's actual error data
+            if (errorData && Object.keys(errorData).length > 0) {
+              console.error("Error looking up customer:", {
+                status: response.status,
+                statusText: response.statusText,
+                error: errorData.error,
+                details: errorData.details,
+              });
+              
+              // If it's a database initialization error, show a helpful message
+              if (errorData.error?.includes("Database not initialized") || 
+                  errorData.error?.includes("Database connection failed")) {
+                console.warn("⚠️ Database setup issue detected. Please restart your dev server and ensure migrations are applied.");
+              }
+            }
+          } else {
+            // Non-JSON response
+            const text = await response.text();
+            console.error("Error looking up customer - Non-JSON response:", {
+              status: response.status,
+              statusText: response.statusText,
+              contentType,
+              preview: text.substring(0, 100),
+            });
           }
         } catch (parseError) {
           console.error("Error parsing error response:", parseError);
@@ -182,11 +160,6 @@ function AddPageContent() {
       return;
     }
 
-    if (!formData.service) {
-      toast.error("Please select a service");
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -197,8 +170,6 @@ function AddPageContent() {
         body: JSON.stringify({
           phone: normalizedPhone,
           name: formData.name.trim(),
-          barberName: formData.barberName.trim() || undefined,
-          service: formData.service,
           notes: formData.notes.trim() || undefined,
         }),
       });
@@ -303,100 +274,6 @@ function AddPageContent() {
                   <p className="mt-1 text-xs text-gray-500">
                     You can edit the name if needed
                   </p>
-                )}
-              </div>
-
-              {/* Barber/Stylist Name */}
-              <div>
-                <label
-                  htmlFor="barberName"
-                  className="block text-sm sm:text-base font-medium text-gray-700 mb-2"
-                >
-                  Barber/Stylist Name (Optional)
-                </label>
-                <input
-                  id="barberName"
-                  type="text"
-                  value={formData.barberName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, barberName: e.target.value })
-                  }
-                  className="w-full h-12 sm:h-14 px-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-                  placeholder="Enter barber or stylist name"
-                />
-              </div>
-
-              {/* Service Type */}
-              <div>
-                <label
-                  htmlFor="service"
-                  className="block text-sm sm:text-base font-medium text-gray-700 mb-2"
-                >
-                  Service Type *
-                </label>
-                
-                {loadingServices ? (
-                  <div className="w-full h-12 sm:h-14 px-4 border border-gray-300 rounded-xl flex items-center text-gray-500">
-                    Loading services...
-                  </div>
-                ) : services.length > 0 ? (
-                  <>
-                    {/* Service dropdown - Name only - Mobile optimized with shadcn Select */}
-                    <Select
-                      value={formData.service}
-                      onValueChange={(value) => {
-                        const service = services.find(s => s.name === value) || null;
-                        setSelectedService(service);
-                        setFormData({ ...formData, service: value });
-                      }}
-                    >
-                      <SelectTrigger className="w-full h-12 sm:h-14 text-base" id="service">
-                        <SelectValue placeholder="Select a service" />
-                      </SelectTrigger>
-                      <SelectContent className="w-[var(--radix-select-trigger-width)] max-h-60 overflow-y-auto">
-                        {services.map((service) => (
-                          <SelectItem key={service.id} value={service.name}>
-                            {service.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {/* Service details - shown after selection */}
-                    {selectedService && (
-                      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                        <div>
-                          <label className="block text-sm sm:text-base font-medium text-gray-700 mb-2">
-                            Price
-                          </label>
-                          <div className="h-12 px-4 border border-gray-200 rounded-xl bg-gray-50 flex items-center text-base font-semibold text-gray-900">
-                            ${selectedService.price.toFixed(2)}
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm sm:text-base font-medium text-gray-700 mb-2">
-                            Duration
-                          </label>
-                          <div className="h-12 px-4 border border-gray-200 rounded-xl bg-gray-50 flex items-center text-base font-semibold text-gray-900">
-                            {selectedService.duration} min
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  // Fallback to text input if no services
-                  <input
-                    id="service"
-                    type="text"
-                    value={formData.service}
-                    onChange={(e) =>
-                      setFormData({ ...formData, service: e.target.value })
-                    }
-                    className="w-full h-12 sm:h-14 px-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-                    placeholder="e.g., Haircut"
-                    required
-                  />
                 )}
               </div>
 

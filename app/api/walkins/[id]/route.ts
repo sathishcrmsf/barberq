@@ -10,6 +10,8 @@ const statusSchema = z.enum(["waiting", "in-progress", "done"]);
 
 const updateSchema = z.object({
   status: statusSchema.optional(),
+  staffId: z.string().optional(),
+  service: z.string().optional(),
 });
 
 // PATCH /api/walkins/:id - Update walk-in status
@@ -26,7 +28,7 @@ export async function PATCH(
     const currentWalkIn = await prisma.walkIn.findUnique({
       where: { id },
       include: {
-        customer: true,
+        Customer: true,
       },
     });
 
@@ -42,46 +44,81 @@ export async function PATCH(
       status?: string;
       startedAt?: Date;
       completedAt?: Date;
+      staffId?: string;
+      service?: string;
     } = {};
 
     if (validatedData.status) {
       updateData.status = validatedData.status;
     }
 
-    // If transitioning to "in-progress", set startedAt timestamp
-    if (validatedData.status === "in-progress" && !currentWalkIn.startedAt) {
-      updateData.startedAt = new Date();
+    // If transitioning to "in-progress", set startedAt timestamp and staffId
+    if (validatedData.status === "in-progress") {
+      if (!currentWalkIn.startedAt) {
+        updateData.startedAt = new Date();
+      }
+      // Update staffId if provided
+      if (validatedData.staffId) {
+        updateData.staffId = validatedData.staffId;
+      }
     }
 
-    // If transitioning to "done", set completedAt timestamp
+    // If transitioning to "done", set completedAt timestamp and service
     if (validatedData.status === "done") {
       updateData.completedAt = new Date();
+      // Update service if provided
+      if (validatedData.service) {
+        updateData.service = validatedData.service;
+      }
+    }
+
+    // Allow updating staffId or service even if status isn't changing
+    if (validatedData.staffId && validatedData.status !== "in-progress") {
+      updateData.staffId = validatedData.staffId;
+    }
+    if (validatedData.service && validatedData.status !== "done") {
+      updateData.service = validatedData.service;
     }
 
     const walkIn = await prisma.walkIn.update({
       where: { id },
       data: updateData,
       include: {
-        customer: true,
+        Customer: true,
+        Staff: true,
       },
     });
 
     // If transitioning to "done", fetch service details for the completion popup
     if (validatedData.status === "done") {
-      const service = await prisma.service.findFirst({
-        where: { name: walkIn.service },
+      // Handle multiple services (joined with " + ")
+      const serviceNames = walkIn.service ? walkIn.service.split(" + ").map(s => s.trim()) : [];
+      
+      // Fetch all services
+      const services = await prisma.service.findMany({
+        where: { 
+          name: { in: serviceNames }
+        },
       });
+
+      // Calculate totals for all services
+      const totalPrice = services.reduce((sum, s) => sum + s.price, 0);
+      const totalDuration = services.reduce((sum, s) => sum + s.duration, 0);
 
       // Calculate time taken in minutes
       const timeTaken = walkIn.startedAt
         ? Math.round((new Date().getTime() - new Date(walkIn.startedAt).getTime()) / 60000)
         : 0;
 
+      // Get barber name from Staff relation or fallback to barberName field
+      const barberName = walkIn.Staff?.name || walkIn.barberName;
+
       return NextResponse.json({
         ...walkIn,
+        barberName,
         serviceDetails: {
-          price: service?.price || 0,
-          duration: service?.duration || 0,
+          price: totalPrice,
+          duration: totalDuration,
           timeTaken,
         },
       }, { status: 200 });
@@ -123,7 +160,7 @@ export async function DELETE(
     const walkIn = await prisma.walkIn.findUnique({
       where: { id },
       include: {
-        customer: true,
+        Customer: true,
       },
     });
 

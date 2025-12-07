@@ -134,7 +134,7 @@ export async function analyzeServiceCombinations(): Promise<{
       status: "done",
     },
     include: {
-      customer: true,
+      Customer: true,
     },
   });
 
@@ -237,7 +237,7 @@ export async function analyzeServiceCombinations(): Promise<{
       description: `${topCombination.services.join(" + ")} frequently booked together`,
       emoji: "📦",
       priority: InsightPriority.MEDIUM,
-      value: `$${topCombination.savings} savings`,
+      value: `₹${topCombination.savings} savings`,
       actionable: true,
       actionLabel: "Create Bundle",
       actionUrl: "/services",
@@ -271,7 +271,7 @@ export async function predictSlotNoShowRisk(): Promise<{
       },
     },
     include: {
-      customer: true,
+      Customer: true,
     },
   });
 

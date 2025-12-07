@@ -112,7 +112,7 @@ export async function recommendServicePackages(): Promise<{
       status: "done",
     },
     include: {
-      customer: true,
+      Customer: true,
     },
   });
 
@@ -190,7 +190,7 @@ export async function recommendServicePackages(): Promise<{
       description: `${topPackage.name} is frequently booked together`,
       emoji: "📦",
       priority: InsightPriority.MEDIUM,
-      value: `$${topPackage.savings} savings`,
+      value: `₹${topPackage.savings} savings`,
       actionable: true,
       actionLabel: "Create Package",
       actionUrl: "/services",

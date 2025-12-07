@@ -9,6 +9,8 @@ import { useRouter } from "next/navigation";
 import { QueueItem } from "@/components/ui/queue-item";
 import { Button } from "@/components/ui/button";
 import { CompletionPopup } from "@/components/ui/completion-popup";
+import { StylistSelectionModal } from "@/components/ui/stylist-selection-modal";
+import { ServiceSelectionModal } from "@/components/ui/service-selection-modal";
 import { Plus, Settings, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
@@ -18,10 +20,16 @@ interface Customer {
   name: string;
 }
 
+interface StaffRelation {
+  id: string;
+  name: string;
+  title?: string | null;
+}
+
 interface WalkIn {
   id: string;
   customerId: string;
-  customer: Customer;
+  Customer: Customer | null; // Prisma relation uses capital C
   customerName?: string | null; // Legacy field, kept for backward compatibility
   service: string;
   barberName?: string | null;
@@ -30,6 +38,7 @@ interface WalkIn {
   createdAt: string;
   startedAt?: string | null;
   completedAt?: string | null;
+  Staff?: StaffRelation | null;
 }
 
 interface CompletionData {
@@ -40,6 +49,21 @@ interface CompletionData {
   amount: number;
 }
 
+interface Staff {
+  id: string;
+  name: string;
+  title?: string | null;
+  isActive: boolean;
+}
+
+interface Service {
+  id: string;
+  name: string;
+  price: number;
+  duration: number;
+  isActive: boolean;
+}
+
 export default function QueuePage() {
   const router = useRouter();
   const [walkIns, setWalkIns] = useState<WalkIn[]>([]);
@@ -48,16 +72,71 @@ export default function QueuePage() {
   const [completionData, setCompletionData] = useState<CompletionData | null>(null);
   const [showCompletionPopup, setShowCompletionPopup] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  
+  // Stylist selection modal state
+  const [showStylistModal, setShowStylistModal] = useState(false);
+  const [pendingStartWalkInId, setPendingStartWalkInId] = useState<string | null>(null);
+  const [staff, setStaff] = useState<Staff[]>([]);
+  const [loadingStaff, setLoadingStaff] = useState(false);
+  
+  // Service selection modal state
+  const [showServiceModal, setShowServiceModal] = useState(false);
+  const [pendingDoneWalkInId, setPendingDoneWalkInId] = useState<string | null>(null);
+  const [services, setServices] = useState<Service[]>([]);
+  const [loadingServices, setLoadingServices] = useState(false);
 
   const fetchWalkIns = async () => {
     try {
-      const response = await fetch("/api/walkins");
-      if (!response.ok) throw new Error("Failed to fetch");
+      const response = await fetch("/api/walkins", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        cache: "no-store", // Prevent caching issues
+      });
+      
+      if (!response.ok) {
+        // Try to get error details from response
+        let errorMessage = `Failed to fetch (HTTP ${response.status})`;
+        try {
+          // Check if response is JSON
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorData.details || errorMessage;
+          } else {
+            // Response is not JSON (likely HTML error page)
+            const text = await response.text();
+            errorMessage = `Server error: ${response.status} ${response.statusText}`;
+            console.error("Non-JSON error response:", text.substring(0, 200));
+          }
+        } catch (parseError) {
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          console.error("Error parsing response:", parseError);
+        }
+        throw new Error(errorMessage);
+      }
+      
+      // Ensure response is JSON before parsing
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text();
+        console.error("Expected JSON but got:", contentType, text.substring(0, 200));
+        throw new Error("Server returned non-JSON response");
+      }
+      
       const data = await response.json();
       setWalkIns(data);
     } catch (error) {
-      toast.error("Failed to load queue");
-      console.error(error);
+      // Handle network errors (fetch fails before getting response)
+      if (error instanceof TypeError && error.message.includes("fetch")) {
+        console.error("Network error - server may not be running:", error);
+        toast.error("Cannot connect to server. Please check if the server is running.");
+      } else {
+        const errorMessage = error instanceof Error ? error.message : "Failed to load queue";
+        toast.error(errorMessage);
+        console.error("Error fetching walk-ins:", error);
+      }
     } finally {
       setLoading(false);
     }
@@ -67,22 +146,76 @@ export default function QueuePage() {
     fetchWalkIns();
   }, []);
 
+  // Fetch staff when stylist modal might open
+  useEffect(() => {
+    if (showStylistModal && staff.length === 0 && !loadingStaff) {
+      const fetchStaff = async () => {
+        setLoadingStaff(true);
+        try {
+          const response = await fetch("/api/staff");
+          if (response.ok) {
+            const data = await response.json();
+            setStaff(data);
+          }
+        } catch (error) {
+          console.error("Failed to fetch staff:", error);
+        } finally {
+          setLoadingStaff(false);
+        }
+      };
+      fetchStaff();
+    }
+  }, [showStylistModal, staff.length, loadingStaff]);
+
+  // Fetch services when service modal might open
+  useEffect(() => {
+    if (showServiceModal && services.length === 0 && !loadingServices) {
+      const fetchServices = async () => {
+        setLoadingServices(true);
+        try {
+          const response = await fetch("/api/services/active");
+          if (response.ok) {
+            const data = await response.json();
+            setServices(data);
+          }
+        } catch (error) {
+          console.error("Failed to fetch services:", error);
+        } finally {
+          setLoadingServices(false);
+        }
+      };
+      fetchServices();
+    }
+  }, [showServiceModal, services.length, loadingServices]);
+
   const handleSelect = (id: string) => {
     // Toggle selection - if clicking the same customer, deselect
     setSelectedCustomerId(prevId => prevId === id ? null : id);
   };
 
-  const handleStart = async (id: string) => {
+  const handleStart = (id: string) => {
+    // Show stylist selection modal
+    setPendingStartWalkInId(id);
+    setShowStylistModal(true);
+  };
+
+  const handleStylistConfirm = async (staffId: string) => {
+    if (!pendingStartWalkInId) return;
+
     try {
-      const response = await fetch(`/api/walkins/${id}`, {
+      const response = await fetch(`/api/walkins/${pendingStartWalkInId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "in-progress" }),
+        body: JSON.stringify({ 
+          status: "in-progress",
+          staffId: staffId,
+        }),
       });
 
       if (!response.ok) throw new Error("Failed to update");
       toast.success("Service started");
       setSelectedCustomerId(null); // Deselect after action
+      setPendingStartWalkInId(null);
       fetchWalkIns();
     } catch (error) {
       toast.error("Failed to start service");
@@ -90,12 +223,26 @@ export default function QueuePage() {
     }
   };
 
-  const handleDone = async (id: string) => {
+  const handleDone = (id: string) => {
+    // Show service selection modal
+    setPendingDoneWalkInId(id);
+    setShowServiceModal(true);
+  };
+
+  const handleServiceConfirm = async (serviceNames: string[]) => {
+    if (!pendingDoneWalkInId) return;
+
     try {
-      const response = await fetch(`/api/walkins/${id}`, {
+      // Join multiple services with " + " separator
+      const serviceString = serviceNames.join(" + ");
+      
+      const response = await fetch(`/api/walkins/${pendingDoneWalkInId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "done" }),
+        body: JSON.stringify({ 
+          status: "done",
+          service: serviceString,
+        }),
       });
 
       if (!response.ok) {
@@ -108,7 +255,7 @@ export default function QueuePage() {
       
       // Show completion popup with details
       if (data.serviceDetails) {
-        const customerName = data.customer?.name || data.customerName || "Customer";
+        const customerName = data.Customer?.name || data.customerName || "Customer";
         setCompletionData({
           customerName: customerName,
           service: data.service,
@@ -122,6 +269,7 @@ export default function QueuePage() {
       }
       
       setSelectedCustomerId(null); // Deselect after action
+      setPendingDoneWalkInId(null);
       fetchWalkIns();
     } catch (error) {
       toast.error("Failed to complete service");
@@ -167,6 +315,45 @@ export default function QueuePage() {
   // Calculate total visible customers (only show count for customers that are actually displayed)
   const visibleCustomerCount = waitingCustomers.length + inProgressCustomers.length + completedCustomers.length;
 
+  // Show loading state immediately - don't wait for data
+  if (loading && walkIns.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-32">
+        <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-4 sm:py-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push('/dashboard')}
+              aria-label="Back to dashboard"
+              className="mr-3"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Queue</h1>
+              <p className="text-sm sm:text-base text-gray-600 mt-1">Loading...</p>
+            </div>
+          </div>
+        </header>
+        <main className="px-0">
+          <div className="flex items-center justify-center min-h-[50vh] px-4">
+            <div className="text-center">
+              <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin mx-auto mb-2"></div>
+              <p className="text-base sm:text-lg text-gray-500">Loading queue...</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Get customer name for modals
+  const getCustomerName = (walkInId: string) => {
+    const walkIn = walkIns.find((w) => w.id === walkInId);
+    return walkIn?.Customer?.name || walkIn?.customerName || "Customer";
+  };
+
   return (
     <>
       {/* Completion Popup */}
@@ -182,6 +369,36 @@ export default function QueuePage() {
           barberName={completionData.barberName}
           timeTaken={completionData.timeTaken}
           amount={completionData.amount}
+        />
+      )}
+
+      {/* Stylist Selection Modal */}
+      {pendingStartWalkInId && (
+        <StylistSelectionModal
+          isOpen={showStylistModal}
+          onClose={() => {
+            setShowStylistModal(false);
+            setPendingStartWalkInId(null);
+          }}
+          onConfirm={handleStylistConfirm}
+          staff={staff}
+          loading={loadingStaff}
+          customerName={getCustomerName(pendingStartWalkInId)}
+        />
+      )}
+
+      {/* Service Selection Modal */}
+      {pendingDoneWalkInId && (
+        <ServiceSelectionModal
+          isOpen={showServiceModal}
+          onClose={() => {
+            setShowServiceModal(false);
+            setPendingDoneWalkInId(null);
+          }}
+          onConfirm={handleServiceConfirm}
+          services={services}
+          loading={loadingServices}
+          customerName={getCustomerName(pendingDoneWalkInId)}
         />
       )}
 
@@ -261,11 +478,7 @@ export default function QueuePage() {
 
       {/* Queue List */}
       <main className="px-0">
-        {loading ? (
-          <div className="flex items-center justify-center min-h-[50vh] px-4">
-            <p className="text-base sm:text-lg text-gray-500">Loading...</p>
-          </div>
-        ) : walkIns.length === 0 ? (
+        {walkIns.length === 0 ? (
           <div className="flex flex-col items-center justify-center min-h-[50vh] px-4 text-center">
             <p className="text-base sm:text-lg text-gray-600 mb-2">No customers in queue</p>
             <p className="text-sm sm:text-base text-gray-500">
@@ -286,7 +499,7 @@ export default function QueuePage() {
                   <QueueItem
                     key={walkIn.id}
                     id={walkIn.id}
-                    customerName={walkIn.customer?.name || walkIn.customerName || "Customer"}
+                    customerName={walkIn.Customer?.name || walkIn.customerName || "Customer"}
                     service={walkIn.service}
                     status={walkIn.status}
                     notes={walkIn.notes}
@@ -312,7 +525,7 @@ export default function QueuePage() {
                   <QueueItem
                     key={walkIn.id}
                     id={walkIn.id}
-                    customerName={walkIn.customer?.name || walkIn.customerName || "Customer"}
+                    customerName={walkIn.Customer?.name || walkIn.customerName || "Customer"}
                     service={walkIn.service}
                     status={walkIn.status}
                     notes={walkIn.notes}
@@ -338,7 +551,7 @@ export default function QueuePage() {
                   <QueueItem
                     key={walkIn.id}
                     id={walkIn.id}
-                    customerName={walkIn.customer?.name || walkIn.customerName || "Customer"}
+                    customerName={walkIn.Customer?.name || walkIn.customerName || "Customer"}
                     service={walkIn.service}
                     status={walkIn.status}
                     notes={walkIn.notes}

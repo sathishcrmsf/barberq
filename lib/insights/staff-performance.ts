@@ -159,7 +159,7 @@ export async function analyzeCustomerSatisfaction(): Promise<{
       description: `${topTicket.staffName} generates the highest ticket sizes`,
       emoji: "💰",
       priority: InsightPriority.INFO,
-      value: `$${topTicket.averageTicketSize.toFixed(0)} avg`,
+      value: `₹${topTicket.averageTicketSize.toFixed(0)} avg`,
       actionable: false,
       metadata: { staffId: topTicket.staffId },
     });

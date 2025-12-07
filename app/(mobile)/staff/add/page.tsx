@@ -62,8 +62,29 @@ export default function AddStaffPage() {
       });
 
       if (!staffRes.ok) {
-        const error = await staffRes.json();
-        throw new Error(error.error || 'Failed to create staff member');
+        const errorData = await staffRes.json().catch(() => ({}));
+        const errorMessage = errorData.error || `Failed to create staff (${staffRes.status})`;
+        const errorDetails = errorData.details || errorData.message || '';
+        
+        // Provide helpful guidance for common errors
+        let userMessage = errorMessage;
+        if (errorDetails) {
+          userMessage += `: ${errorDetails}`;
+        }
+        
+        // Check if it's a database connection error and provide specific guidance
+        if (errorMessage.includes('Database connection') || errorMessage.includes('connection failed') || errorDetails.includes('database')) {
+          // Log helpful troubleshooting info (these are informational, not errors)
+          console.log('🔍 Database connection troubleshooting:');
+          console.log('  1. Check if DATABASE_URL is set in environment variables');
+          console.log('  2. Verify database server is running');
+          console.log('  3. For Supabase: Use connection pooler URL (port 6543)');
+          console.log('  4. See STAFF_DATABASE_ERROR_FIX.md for detailed steps');
+          console.log('  5. Test connection at: /api/debug');
+          userMessage = 'Database connection failed. Visit /api/debug for diagnostics or see DIAGNOSE_DATABASE_ISSUE.md';
+        }
+        
+        throw new Error(userMessage);
       }
 
       const staff = await staffRes.json();
@@ -243,7 +264,7 @@ export default function AddStaffPage() {
                         <div className="flex-1">
                           <div className="font-medium">{service.name}</div>
                           <div className="text-sm text-gray-600">
-                            ${service.price} • {service.duration} min
+                            ₹{service.price} • {service.duration} min
                           </div>
                           {isSelected && (
                             <button

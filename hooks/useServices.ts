@@ -21,15 +21,15 @@ export interface Service {
     id: string;
     name: string;
   } | null;
-  staffServices?: {
+  StaffService?: {
     id: string;
-    staff: {
+    Staff: {
       id: string;
       name: string;
     };
   }[];
   _count?: {
-    staffServices: number;
+    StaffService: number;
   };
   usageCount?: number; // Number of times service appears in WalkIn records
   isTopUsed?: boolean; // True if in top 5 most used services

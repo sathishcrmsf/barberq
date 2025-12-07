@@ -56,7 +56,7 @@ export function EditServiceDrawer({ isOpen, onClose, service, onSuccess }: EditS
       
       // Fetch current staff assignments for this service
       const currentService = services.find(s => s.id === service.id);
-      const currentStaffIds = currentService?.staffServices?.map(ss => ss.staff.id) || [];
+      const currentStaffIds = currentService?.StaffService?.map(ss => ss.Staff.id) || [];
 
       setFormData({
         name: service.name,
@@ -109,7 +109,7 @@ export function EditServiceDrawer({ isOpen, onClose, service, onSuccess }: EditS
       if (formData.price <= 0) {
         newErrors.price = 'Price must be greater than 0';
       } else if (formData.price > 9999.99) {
-        newErrors.price = 'Price too high (max $9999.99)';
+        newErrors.price = 'Price too high (max ₹9999.99)';
       }
 
       if (formData.duration < 5) {
@@ -297,7 +297,7 @@ export function EditServiceDrawer({ isOpen, onClose, service, onSuccess }: EditS
                               </p>
                             )}
                             <p className="text-xs text-gray-500 mt-1">
-                              {category._count?.services || 0} services
+                              {category._count?.Service || 0} services
                             </p>
                           </div>
                           {formData.categoryId === category.id && (
@@ -338,14 +338,14 @@ export function EditServiceDrawer({ isOpen, onClose, service, onSuccess }: EditS
 
                 <div className="grid grid-cols-2 gap-4">
                   <Input
-                    label="Price (USD)"
+                    label="Price (INR)"
                     type="number"
                     step="0.01"
                     value={formData.price || ''}
                     onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
                     placeholder="25.00"
                     error={errors.price}
-                    leftIcon={<span className="text-gray-500">$</span>}
+                    leftIcon={<span className="text-gray-500">₹</span>}
                     required
                     min={0}
                     max={9999.99}
@@ -508,7 +508,7 @@ export function EditServiceDrawer({ isOpen, onClose, service, onSuccess }: EditS
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <p className="text-sm text-gray-600">Price</p>
-                          <p className="font-medium">${formData.price.toFixed(2)}</p>
+                          <p className="font-medium">₹{formData.price.toFixed(2)}</p>
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">Duration</p>

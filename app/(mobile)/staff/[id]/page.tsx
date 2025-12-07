@@ -20,7 +20,7 @@ interface Service {
 
 interface StaffService {
   isPrimary: boolean;
-  service: Service;
+  Service: Service;
 }
 
 interface Staff {
@@ -33,10 +33,10 @@ interface Staff {
   bio?: string;
   displayOrder: number;
   isActive: boolean;
-  staffServices: StaffService[];
+  StaffService: StaffService[];
   _count: {
-    staffServices: number;
-    walkIns: number;
+    StaffService: number;
+    WalkIn: number;
   };
 }
 
@@ -112,8 +112,8 @@ export default function StaffDetailPage() {
     }
   }
 
-  const primaryService = staff?.staffServices.find(ss => ss.isPrimary);
-  const otherServices = staff?.staffServices.filter(ss => !ss.isPrimary) || [];
+  const primaryService = staff?.StaffService?.find(ss => ss.isPrimary);
+  const otherServices = staff?.StaffService?.filter(ss => !ss.isPrimary) || [];
 
   if (loading) {
     return (
@@ -179,13 +179,13 @@ export default function StaffDetailPage() {
             <div className="flex gap-6 mt-4 text-center">
               <div>
                 <div className="text-2xl font-bold text-blue-600">
-                  {staff._count.staffServices}
+                  {staff._count.StaffService}
                 </div>
                 <div className="text-xs text-gray-500">Services</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-green-600">
-                  {staff._count.walkIns}
+                  {staff._count.WalkIn}
                 </div>
                 <div className="text-xs text-gray-500">Clients Served</div>
               </div>
@@ -234,7 +234,7 @@ export default function StaffDetailPage() {
         <Card className="p-4 mb-4">
           <h3 className="font-semibold mb-3">Services</h3>
           
-          {staff.staffServices.length === 0 ? (
+          {staff.StaffService?.length === 0 ? (
             <p className="text-sm text-gray-500 text-center py-4">
               No services assigned yet
             </p>
@@ -248,11 +248,11 @@ export default function StaffDetailPage() {
                       <div className="flex items-center gap-2">
                         <span className="text-yellow-600">⭐</span>
                         <span className="font-medium">
-                          {primaryService.service.name}
+                          {primaryService.Service.name}
                         </span>
                       </div>
                       <div className="text-sm text-gray-600 mt-1">
-                        ${primaryService.service.price} • {primaryService.service.duration} min
+                        ₹{primaryService.Service.price} • {primaryService.Service.duration} min
                       </div>
                     </div>
                     <span className="text-xs px-2 py-1 bg-yellow-200 text-yellow-800 rounded-full">
@@ -263,11 +263,11 @@ export default function StaffDetailPage() {
               )}
 
               {/* Other Services */}
-              {otherServices.map(({ service }) => (
-                <div key={service.id} className="border rounded-lg p-3">
-                  <div className="font-medium">{service.name}</div>
+              {otherServices.map(({ Service }) => (
+                <div key={Service.id} className="border rounded-lg p-3">
+                  <div className="font-medium">{Service.name}</div>
                   <div className="text-sm text-gray-600 mt-1">
-                    ${service.price} • {service.duration} min
+                    ₹{Service.price} • {Service.duration} min
                   </div>
                 </div>
               ))}

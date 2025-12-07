@@ -42,7 +42,7 @@ export function ServiceCard({
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-base sm:text-lg truncate">{name}</h3>
               <p className="text-gray-600 text-sm sm:text-base mt-1 truncate">
-                ${price.toFixed(2)} • {duration} min
+                ₹{price.toFixed(2)} • {duration} min
               </p>
             </div>
             <ServiceBadge isActive={isActive} />

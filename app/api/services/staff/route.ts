@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
     if (validated.staffIds.length > 0) {
       await prisma.staffService.createMany({
         data: validated.staffIds.map((staffId) => ({
+          id: crypto.randomUUID(),
           serviceId: validated.serviceId,
           staffId,
           isPrimary: false,

@@ -58,7 +58,7 @@ export async function analyzeServiceRevenue(): Promise<{
       description: `${topService.serviceName} generates the most revenue`,
       emoji: "⭐",
       priority: InsightPriority.INFO,
-      value: `$${topService.totalRevenue.toFixed(0)}`,
+      value: `₹${topService.totalRevenue.toFixed(0)}`,
       actionable: true,
       actionLabel: "View Details",
       actionUrl: "/analytics",
@@ -87,7 +87,7 @@ export async function analyzeServiceRevenue(): Promise<{
       description: `${topRevenuePerHour.serviceName} generates highest revenue per hour`,
       emoji: "⚡",
       priority: InsightPriority.INFO,
-      value: `$${topRevenuePerHour.revenuePerHour.toFixed(0)}/hr`,
+      value: `₹${topRevenuePerHour.revenuePerHour.toFixed(0)}/hr`,
       actionable: false,
       metadata: { serviceName: topRevenuePerHour.serviceName },
     });
@@ -115,7 +115,7 @@ export async function analyzeCashFlowTrends(): Promise<{
       completedAt: { not: null },
     },
     include: {
-      customer: true,
+      Customer: true,
     },
   });
 
@@ -236,7 +236,7 @@ export async function analyzeCashFlowTrends(): Promise<{
       description: `${bestDay[0]} generates the most revenue`,
       emoji: "📅",
       priority: InsightPriority.INFO,
-      value: `$${bestDay[1].toFixed(0)}`,
+      value: `₹${bestDay[1].toFixed(0)}`,
       actionable: false,
       metadata: { day: bestDay[0] },
     });
@@ -278,7 +278,7 @@ export async function analyzeStaffRevenue(): Promise<{
       description: `${topPerformer.staffName} generates the most revenue`,
       emoji: "⭐",
       priority: InsightPriority.INFO,
-      value: `$${topPerformer.totalRevenue.toFixed(0)}`,
+      value: `₹${topPerformer.totalRevenue.toFixed(0)}`,
       actionable: true,
       actionLabel: "View Staff",
       actionUrl: "/staff",
@@ -304,7 +304,7 @@ export async function analyzeStaffRevenue(): Promise<{
       description: `${efficientStaff.staffName} has highest revenue per service`,
       emoji: "⚡",
       priority: InsightPriority.INFO,
-      value: `$${efficiency.toFixed(0)}/service`,
+      value: `₹${efficiency.toFixed(0)}/service`,
       actionable: false,
       metadata: { staffId: efficientStaff.staffId },
     });

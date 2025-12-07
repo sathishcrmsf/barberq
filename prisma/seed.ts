@@ -44,38 +44,46 @@ async function main() {
   const categories = await Promise.all([
     prisma.category.create({
       data: {
+        id: crypto.randomUUID(),
         name: 'Haircuts',
         description: 'Classic and modern haircut styles',
         icon: 'Scissors',
         displayOrder: 1,
         isActive: true,
+        updatedAt: new Date(),
       },
     }),
     prisma.category.create({
       data: {
+        id: crypto.randomUUID(),
         name: 'Beard & Shave',
         description: 'Grooming services for facial hair',
         icon: 'Sparkles',
         displayOrder: 2,
         isActive: true,
+        updatedAt: new Date(),
       },
     }),
     prisma.category.create({
       data: {
+        id: crypto.randomUUID(),
         name: 'Hair Treatments',
         description: 'Professional hair care treatments',
         icon: 'Droplet',
         displayOrder: 3,
         isActive: true,
+        updatedAt: new Date(),
       },
     }),
     prisma.category.create({
       data: {
+        id: crypto.randomUUID(),
         name: 'Styling',
         description: 'Special occasion styling services',
         icon: 'Sparkle',
         displayOrder: 4,
         isActive: true,
+        updatedAt: new Date(),
       },
     }),
   ])
@@ -86,12 +94,14 @@ async function main() {
     // Basic services (lower price)
     prisma.service.create({
       data: {
+        id: crypto.randomUUID(),
         name: 'Classic Haircut',
         price: 30,
         duration: 30,
         description: 'Traditional haircut',
         categoryId: categories[0].id,
         isActive: true,
+        updatedAt: new Date(),
       },
     }),
     prisma.service.create({
@@ -102,6 +112,8 @@ async function main() {
         description: 'Quick buzz cut',
         categoryId: categories[0].id,
         isActive: true,
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
       },
     }),
     prisma.service.create({
@@ -112,6 +124,8 @@ async function main() {
         description: 'Beard shaping',
         categoryId: categories[1].id,
         isActive: true,
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
       },
     }),
     prisma.service.create({
@@ -122,6 +136,8 @@ async function main() {
         description: 'Haircut for children',
         categoryId: categories[0].id,
         isActive: true,
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
       },
     }),
     // Premium services (higher price)
@@ -133,6 +149,8 @@ async function main() {
         description: 'High-quality fade',
         categoryId: categories[0].id,
         isActive: true,
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
       },
     }),
     prisma.service.create({
@@ -143,6 +161,8 @@ async function main() {
         description: 'Luxury shave',
         categoryId: categories[1].id,
         isActive: true,
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
       },
     }),
     prisma.service.create({
@@ -153,6 +173,8 @@ async function main() {
         description: 'Complete grooming',
         categoryId: categories[1].id,
         isActive: true,
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
       },
     }),
     prisma.service.create({
@@ -163,6 +185,8 @@ async function main() {
         description: 'Professional coloring',
         categoryId: categories[2].id,
         isActive: true,
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
       },
     }),
     prisma.service.create({
@@ -173,6 +197,8 @@ async function main() {
         description: 'Deep scalp treatment',
         categoryId: categories[2].id,
         isActive: true,
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
       },
     }),
     prisma.service.create({
@@ -183,6 +209,8 @@ async function main() {
         description: 'Event styling',
         categoryId: categories[3].id,
         isActive: true,
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
       },
     }),
   ])
@@ -199,6 +227,8 @@ async function main() {
         bio: '15 years experience',
         displayOrder: 1,
         isActive: true,
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
       },
     }),
     prisma.staff.create({
@@ -210,6 +240,8 @@ async function main() {
         bio: 'Expert in classic cuts',
         displayOrder: 2,
         isActive: true,
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
       },
     }),
     prisma.staff.create({
@@ -221,6 +253,8 @@ async function main() {
         bio: 'Specializes in coloring',
         displayOrder: 3,
         isActive: true,
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
       },
     }),
     prisma.staff.create({
@@ -232,6 +266,8 @@ async function main() {
         bio: 'Great with kids',
         displayOrder: 4,
         isActive: true,
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
       },
     }),
   ])
@@ -240,22 +276,22 @@ async function main() {
   console.log('🔗 Linking staff to services...')
   await Promise.all([
     // Marcus - Premium services
-    prisma.staffService.create({ data: { staffId: staff[0].id, serviceId: services[4].id, isPrimary: true, yearsExperience: 15 } }),
-    prisma.staffService.create({ data: { staffId: staff[0].id, serviceId: services[0].id, isPrimary: true, yearsExperience: 12 } }),
-    prisma.staffService.create({ data: { staffId: staff[0].id, serviceId: services[6].id, isPrimary: true, yearsExperience: 10 } }),
+    prisma.staffService.create({ data: { id: crypto.randomUUID(), staffId: staff[0].id, serviceId: services[4].id, isPrimary: true, yearsExperience: 15 } }),
+    prisma.staffService.create({ data: { id: crypto.randomUUID(), staffId: staff[0].id, serviceId: services[0].id, isPrimary: true, yearsExperience: 12 } }),
+    prisma.staffService.create({ data: { id: crypto.randomUUID(), staffId: staff[0].id, serviceId: services[6].id, isPrimary: true, yearsExperience: 10 } }),
     // Diego - Classic and beard
-    prisma.staffService.create({ data: { staffId: staff[1].id, serviceId: services[0].id, isPrimary: true, yearsExperience: 10 } }),
-    prisma.staffService.create({ data: { staffId: staff[1].id, serviceId: services[2].id, isPrimary: true, yearsExperience: 10 } }),
-    prisma.staffService.create({ data: { staffId: staff[1].id, serviceId: services[5].id, isPrimary: true, yearsExperience: 8 } }),
-    prisma.staffService.create({ data: { staffId: staff[1].id, serviceId: services[6].id, isPrimary: true, yearsExperience: 9 } }),
+    prisma.staffService.create({ data: { id: crypto.randomUUID(), staffId: staff[1].id, serviceId: services[0].id, isPrimary: true, yearsExperience: 10 } }),
+    prisma.staffService.create({ data: { id: crypto.randomUUID(), staffId: staff[1].id, serviceId: services[2].id, isPrimary: true, yearsExperience: 10 } }),
+    prisma.staffService.create({ data: { id: crypto.randomUUID(), staffId: staff[1].id, serviceId: services[5].id, isPrimary: true, yearsExperience: 8 } }),
+    prisma.staffService.create({ data: { id: crypto.randomUUID(), staffId: staff[1].id, serviceId: services[6].id, isPrimary: true, yearsExperience: 9 } }),
     // James - Treatments
-    prisma.staffService.create({ data: { staffId: staff[2].id, serviceId: services[7].id, isPrimary: true, yearsExperience: 8 } }),
-    prisma.staffService.create({ data: { staffId: staff[2].id, serviceId: services[8].id, isPrimary: true, yearsExperience: 6 } }),
-    prisma.staffService.create({ data: { staffId: staff[2].id, serviceId: services[9].id, isPrimary: false, yearsExperience: 5 } }),
+    prisma.staffService.create({ data: { id: crypto.randomUUID(), staffId: staff[2].id, serviceId: services[7].id, isPrimary: true, yearsExperience: 8 } }),
+    prisma.staffService.create({ data: { id: crypto.randomUUID(), staffId: staff[2].id, serviceId: services[8].id, isPrimary: true, yearsExperience: 6 } }),
+    prisma.staffService.create({ data: { id: crypto.randomUUID(), staffId: staff[2].id, serviceId: services[9].id, isPrimary: false, yearsExperience: 5 } }),
     // Alex - Basic services
-    prisma.staffService.create({ data: { staffId: staff[3].id, serviceId: services[3].id, isPrimary: true, yearsExperience: 5 } }),
-    prisma.staffService.create({ data: { staffId: staff[3].id, serviceId: services[1].id, isPrimary: true, yearsExperience: 4 } }),
-    prisma.staffService.create({ data: { staffId: staff[3].id, serviceId: services[0].id, isPrimary: false, yearsExperience: 4 } }),
+    prisma.staffService.create({ data: { id: crypto.randomUUID(), staffId: staff[3].id, serviceId: services[3].id, isPrimary: true, yearsExperience: 5 } }),
+    prisma.staffService.create({ data: { id: crypto.randomUUID(), staffId: staff[3].id, serviceId: services[1].id, isPrimary: true, yearsExperience: 4 } }),
+    prisma.staffService.create({ data: { id: crypto.randomUUID(), staffId: staff[3].id, serviceId: services[0].id, isPrimary: false, yearsExperience: 4 } }),
   ])
 
   // 5. Create Customers with Different Patterns
@@ -269,7 +305,7 @@ async function main() {
   const regularCustomers = []
   for (let i = 0; i < 10; i++) {
     const customer = await prisma.customer.create({
-      data: { phone: `+9112345678${String(i).padStart(2, '0')}`, name: `Regular Customer ${i + 1}` },
+      data: { updatedAt: new Date(), phone: `+9112345678${String(i).padStart(2, '0')}`, name: `Regular Customer ${i + 1}` },
     })
     regularCustomers.push(customer)
   }
@@ -278,7 +314,7 @@ async function main() {
   const biMonthlyCustomers = []
   for (let i = 0; i < 8; i++) {
     const customer = await prisma.customer.create({
-      data: { phone: `+9112345688${String(i).padStart(2, '0')}`, name: `BiMonthly Customer ${i + 1}` },
+      data: { updatedAt: new Date(), phone: `+9112345688${String(i).padStart(2, '0')}`, name: `BiMonthly Customer ${i + 1}` },
     })
     biMonthlyCustomers.push(customer)
   }
@@ -287,7 +323,7 @@ async function main() {
   const quarterlyCustomers = []
   for (let i = 0; i < 6; i++) {
     const customer = await prisma.customer.create({
-      data: { phone: `+9112345698${String(i).padStart(2, '0')}`, name: `Quarterly Customer ${i + 1}` },
+      data: { updatedAt: new Date(), phone: `+9112345698${String(i).padStart(2, '0')}`, name: `Quarterly Customer ${i + 1}` },
     })
     quarterlyCustomers.push(customer)
   }
@@ -296,7 +332,7 @@ async function main() {
   const inactive30Customers = []
   for (let i = 0; i < 5; i++) {
     const customer = await prisma.customer.create({
-      data: { phone: `+9112345708${String(i).padStart(2, '0')}`, name: `Inactive 30d Customer ${i + 1}` },
+      data: { updatedAt: new Date(), phone: `+9112345708${String(i).padStart(2, '0')}`, name: `Inactive 30d Customer ${i + 1}` },
     })
     inactive30Customers.push(customer)
   }
@@ -305,7 +341,7 @@ async function main() {
   const inactive60Customers = []
   for (let i = 0; i < 5; i++) {
     const customer = await prisma.customer.create({
-      data: { phone: `+9112345718${String(i).padStart(2, '0')}`, name: `Inactive 60d Customer ${i + 1}` },
+      data: { updatedAt: new Date(), phone: `+9112345718${String(i).padStart(2, '0')}`, name: `Inactive 60d Customer ${i + 1}` },
     })
     inactive60Customers.push(customer)
   }
@@ -314,7 +350,7 @@ async function main() {
   const inactive90Customers = []
   for (let i = 0; i < 5; i++) {
     const customer = await prisma.customer.create({
-      data: { phone: `+9112345728${String(i).padStart(2, '0')}`, name: `Inactive 90d Customer ${i + 1}` },
+      data: { updatedAt: new Date(), phone: `+9112345728${String(i).padStart(2, '0')}`, name: `Inactive 90d Customer ${i + 1}` },
     })
     inactive90Customers.push(customer)
   }
@@ -323,7 +359,7 @@ async function main() {
   const basicOnlyCustomers = []
   for (let i = 0; i < 8; i++) {
     const customer = await prisma.customer.create({
-      data: { phone: `+9112345738${String(i).padStart(2, '0')}`, name: `Basic Only Customer ${i + 1}` },
+      data: { updatedAt: new Date(), phone: `+9112345738${String(i).padStart(2, '0')}`, name: `Basic Only Customer ${i + 1}` },
     })
     basicOnlyCustomers.push(customer)
   }
@@ -332,7 +368,7 @@ async function main() {
   const highValueCustomers = []
   for (let i = 0; i < 5; i++) {
     const customer = await prisma.customer.create({
-      data: { phone: `+9112345748${String(i).padStart(2, '0')}`, name: `High Value Customer ${i + 1}` },
+      data: { updatedAt: new Date(), phone: `+9112345748${String(i).padStart(2, '0')}`, name: `High Value Customer ${i + 1}` },
     })
     highValueCustomers.push(customer)
   }
@@ -341,7 +377,7 @@ async function main() {
   const newCustomers = []
   for (let i = 0; i < 5; i++) {
     const customer = await prisma.customer.create({
-      data: { phone: `+9112345758${String(i).padStart(2, '0')}`, name: `New Customer ${i + 1}` },
+      data: { updatedAt: new Date(), phone: `+9112345758${String(i).padStart(2, '0')}`, name: `New Customer ${i + 1}` },
     })
     newCustomers.push(customer)
   }
@@ -368,6 +404,7 @@ async function main() {
       const completedAt = new Date(startedAt.getTime() + service.duration * 60 * 1000)
 
       allWalkIns.push({
+        id: crypto.randomUUID(),
         customerId: customer.id,
         customerName: customer.name,
         service: service.name,
@@ -398,6 +435,7 @@ async function main() {
       const completedAt = new Date(startedAt.getTime() + service.duration * 60 * 1000)
 
       allWalkIns.push({
+        id: crypto.randomUUID(),
         customerId: customer.id,
         customerName: customer.name,
         service: service.name,
@@ -427,6 +465,7 @@ async function main() {
       const completedAt = new Date(startedAt.getTime() + service.duration * 60 * 1000)
 
       allWalkIns.push({
+        id: crypto.randomUUID(),
         customerId: customer.id,
         customerName: customer.name,
         service: service.name,
@@ -453,6 +492,7 @@ async function main() {
     const completedAt = new Date(startedAt.getTime() + service.duration * 60 * 1000)
 
     allWalkIns.push({
+      id: crypto.randomUUID(),
       customerId: customer.id,
       customerName: customer.name,
       service: service.name,
@@ -478,6 +518,7 @@ async function main() {
     const completedAt = new Date(startedAt.getTime() + service.duration * 60 * 1000)
 
     allWalkIns.push({
+      id: crypto.randomUUID(),
       customerId: customer.id,
       customerName: customer.name,
       service: service.name,
@@ -503,6 +544,7 @@ async function main() {
     const completedAt = new Date(startedAt.getTime() + service.duration * 60 * 1000)
 
     allWalkIns.push({
+      id: crypto.randomUUID(),
       customerId: customer.id,
       customerName: customer.name,
       service: service.name,
@@ -533,6 +575,7 @@ async function main() {
       const completedAt = new Date(startedAt.getTime() + service.duration * 60 * 1000)
 
       allWalkIns.push({
+        id: crypto.randomUUID(),
         customerId: customer.id,
         customerName: customer.name,
         service: service.name,
@@ -563,6 +606,7 @@ async function main() {
       const completedAt = new Date(startedAt.getTime() + service.duration * 60 * 1000)
 
       allWalkIns.push({
+        id: crypto.randomUUID(),
         customerId: customer.id,
         customerName: customer.name,
         service: service.name,
@@ -589,6 +633,7 @@ async function main() {
     const completedAt = new Date(startedAt.getTime() + service.duration * 60 * 1000)
 
     allWalkIns.push({
+      id: crypto.randomUUID(),
       customerId: customer.id,
       customerName: customer.name,
       service: service.name,
@@ -615,7 +660,8 @@ async function main() {
       const customer = await prisma.customer.create({
         data: { 
           phone: `+9112345${String(day).padStart(3, '0')}${String(booking).padStart(2, '0')}`, 
-          name: `Walk-in Customer ${day}-${booking}` 
+          name: `Walk-in Customer ${day}-${booking}`,
+          updatedAt: new Date(),
         },
       })
       
@@ -629,6 +675,7 @@ async function main() {
       const completedAt = new Date(startedAt.getTime() + service.duration * 60 * 1000)
 
       allWalkIns.push({
+        id: crypto.randomUUID(),
         customerId: customer.id,
         customerName: customer.name,
         service: service.name,
@@ -647,7 +694,8 @@ async function main() {
     const customer = await prisma.customer.create({
       data: { 
         phone: `+9112345999${String(i).padStart(2, '0')}`, 
-        name: `No-show Risk Customer ${i + 1}` 
+        name: `No-show Risk Customer ${i + 1}`,
+        updatedAt: new Date(),
       },
     })
     
@@ -663,6 +711,7 @@ async function main() {
     // No completedAt - service started but not finished
 
     allWalkIns.push({
+      id: crypto.randomUUID(),
       customerId: customer.id,
       customerName: customer.name,
       service: service.name,
@@ -680,7 +729,8 @@ async function main() {
     const customer = await prisma.customer.create({
       data: { 
         phone: `+9112345888${String(i).padStart(2, '0')}`, 
-        name: `Combo Customer ${i + 1}` 
+        name: `Combo Customer ${i + 1}`,
+        updatedAt: new Date(),
       },
     })
     
@@ -701,6 +751,7 @@ async function main() {
     const completedAt1 = new Date(startedAt1.getTime() + firstService.duration * 60 * 1000)
 
     allWalkIns.push({
+      id: crypto.randomUUID(),
       customerId: customer.id,
       customerName: customer.name,
       service: firstService.name,
@@ -720,6 +771,7 @@ async function main() {
     const completedAt2 = new Date(startedAt2.getTime() + secondService.duration * 60 * 1000)
 
     allWalkIns.push({
+      id: crypto.randomUUID(),
       customerId: customer.id,
       customerName: customer.name,
       service: secondService.name,
@@ -747,7 +799,8 @@ async function main() {
     const customer = await prisma.customer.create({
       data: { 
         phone: `+9112345777${String(i).padStart(2, '0')}`, 
-        name: `Current Customer ${i + 1}` 
+        name: `Current Customer ${i + 1}`,
+        updatedAt: new Date() 
       },
     })
     currentCustomers.push(customer)
@@ -757,6 +810,7 @@ async function main() {
     // In progress
     prisma.walkIn.create({
       data: {
+        id: crypto.randomUUID(),
         customerId: currentCustomers[0].id,
         customerName: currentCustomers[0].name,
         service: services[4].name,
@@ -768,6 +822,7 @@ async function main() {
     }),
     prisma.walkIn.create({
       data: {
+        id: crypto.randomUUID(),
         customerId: currentCustomers[1].id,
         customerName: currentCustomers[1].name,
         service: services[0].name,
@@ -780,6 +835,7 @@ async function main() {
     // Waiting
     prisma.walkIn.create({
       data: {
+        id: crypto.randomUUID(),
         customerId: currentCustomers[2].id,
         customerName: currentCustomers[2].name,
         service: services[2].name,
@@ -789,6 +845,7 @@ async function main() {
     }),
     prisma.walkIn.create({
       data: {
+        id: crypto.randomUUID(),
         customerId: currentCustomers[3].id,
         customerName: currentCustomers[3].name,
         service: services[1].name,
@@ -798,6 +855,7 @@ async function main() {
     }),
     prisma.walkIn.create({
       data: {
+        id: crypto.randomUUID(),
         customerId: currentCustomers[4].id,
         customerName: currentCustomers[4].name,
         service: services[3].name,

@@ -27,15 +27,15 @@ export async function GET(
     const staff = await prisma.staff.findUnique({
       where: { id },
       include: {
-        staffServices: {
+        StaffService: {
           include: {
-            service: true
+            Service: true
           },
           orderBy: {
             isPrimary: 'desc'
           }
         },
-        walkIns: {
+        WalkIn: {
           where: {
             status: {
               in: ['waiting', 'in-progress']
@@ -47,8 +47,8 @@ export async function GET(
         },
         _count: {
           select: { 
-            staffServices: true,
-            walkIns: true 
+            StaffService: true,
+            WalkIn: true 
           }
         }
       }
@@ -97,9 +97,9 @@ export async function PATCH(
       where: { id },
       data: validatedData,
       include: {
-        staffServices: {
+        StaffService: {
           include: {
-            service: true
+            Service: true
           },
           orderBy: {
             isPrimary: 'desc'
@@ -107,8 +107,8 @@ export async function PATCH(
         },
         _count: {
           select: { 
-            staffServices: true,
-            walkIns: true 
+            StaffService: true,
+            WalkIn: true 
           }
         }
       }
@@ -141,7 +141,7 @@ export async function DELETE(
     const staff = await prisma.staff.findUnique({
       where: { id },
       include: {
-        walkIns: {
+        WalkIn: {
           where: {
             status: {
               in: ['waiting', 'in-progress']
@@ -159,11 +159,11 @@ export async function DELETE(
     }
 
     // Check if staff has active walk-ins
-    if (staff.walkIns.length > 0) {
+    if (staff.WalkIn.length > 0) {
       return NextResponse.json(
         { 
           error: 'Cannot delete staff member with active walk-ins',
-          activeWalkIns: staff.walkIns.length 
+          activeWalkIns: staff.WalkIn.length 
         },
         { status: 403 }
       );

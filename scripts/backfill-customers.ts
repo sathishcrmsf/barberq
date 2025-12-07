@@ -35,6 +35,7 @@ async function backfillCustomers() {
         create: {
           phone: placeholderPhone,
           name: walkIn.customerName,
+          updatedAt: new Date(),
         }
       });
 

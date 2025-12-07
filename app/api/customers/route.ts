@@ -4,18 +4,83 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { prisma } from "@/lib/prisma";
 import { validateAndNormalizePhone } from "@/lib/utils";
 
 const customerSchema = z.object({
   phone: z.string().min(1, "Phone number is required"),
   name: z.string().min(1, "Customer name is required"),
+  email: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : val),
+    z.string().email("Invalid email format").optional()
+  ),
 });
 
 // GET /api/customers - Get all customers
 // GET /api/customers?phone=+91XXXXXXXXXX - Lookup customer by phone
 export async function GET(request: NextRequest) {
   try {
+    // Validate database connection before proceeding
+    if (!process.env.DATABASE_URL) {
+      console.error("[GET /api/customers] DATABASE_URL is not set");
+      return NextResponse.json(
+        { 
+          error: "Database configuration error",
+          details: "DATABASE_URL environment variable is not set. Please configure your database connection.",
+          code: "MISSING_DATABASE_URL"
+        },
+        { status: 500 }
+      );
+    }
+
+    // Test connection with a simple query first
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+    } catch (connectionError) {
+      const errorMessage = connectionError instanceof Error ? connectionError.message : String(connectionError);
+      console.error("[GET /api/customers] Database connection test failed:", errorMessage);
+      
+      // Check for specific connection error types
+      if (errorMessage.includes("Can't reach database") || 
+          errorMessage.includes("P1001") ||
+          errorMessage.includes("connection") ||
+          errorMessage.includes("ECONNREFUSED")) {
+        return NextResponse.json(
+          { 
+            error: "Database connection failed",
+            details: "Unable to connect to the database. Please check your DATABASE_URL and ensure the database server is running.",
+            code: "DATABASE_CONNECTION_ERROR",
+            suggestion: "If using Supabase, ensure you're using the connection pooler URL (port 6543) for serverless environments."
+          },
+          { status: 500 }
+        );
+      }
+
+      if (errorMessage.includes("does not exist") || 
+          errorMessage.includes("Unknown table") ||
+          (errorMessage.includes("relation") && errorMessage.includes("does not exist"))) {
+        return NextResponse.json(
+          { 
+            error: "Database schema error",
+            details: "Database tables may not exist. Please run migrations: npx prisma migrate dev",
+            code: "SCHEMA_ERROR"
+          },
+          { status: 500 }
+        );
+      }
+
+      // Generic connection error
+      return NextResponse.json(
+        { 
+          error: "Database error",
+          details: errorMessage,
+          code: "DATABASE_ERROR"
+        },
+        { status: 500 }
+      );
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const phone = searchParams.get("phone");
 
@@ -30,28 +95,50 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      // Lookup customer by phone
-      const customer = await prisma.customer.findUnique({
-        where: { phone: normalizedPhone },
-        include: {
-          _count: {
-            select: {
-              walkIns: true,
+      // Lookup customer by phone with error handling
+      let customer;
+      try {
+        customer = await prisma.customer.findUnique({
+          where: { phone: normalizedPhone },
+          include: {
+            _count: {
+              select: {
+                WalkIn: true,
+              },
+            },
+            WalkIn: {
+              select: {
+                id: true,
+                service: true,
+                status: true,
+                completedAt: true,
+              },
+              orderBy: {
+                completedAt: "desc",
+              },
+              take: 50, // Limit to last 50 walk-ins per customer for performance
             },
           },
-          walkIns: {
-            select: {
-              id: true,
-              service: true,
-              status: true,
-              completedAt: true,
+        });
+      } catch (dbError) {
+        const errorMessage = dbError instanceof Error ? dbError.message : String(dbError);
+        console.error("[GET /api/customers] Error querying customer:", errorMessage);
+        
+        if (errorMessage.includes("does not exist") || 
+            errorMessage.includes("Unknown table") ||
+            (errorMessage.includes("relation") && errorMessage.includes("does not exist"))) {
+          return NextResponse.json(
+            { 
+              error: "Database schema error",
+              details: "Customer table may not exist. Please run migrations: npx prisma migrate dev",
+              code: "SCHEMA_ERROR"
             },
-            orderBy: {
-              completedAt: "desc",
-            },
-          },
-        },
-      });
+            { status: 500 }
+          );
+        }
+        
+        throw dbError; // Re-throw to be caught by outer catch
+      }
 
       if (!customer) {
         return NextResponse.json(
@@ -61,12 +148,19 @@ export async function GET(request: NextRequest) {
       }
 
       // Get all services to map service names to prices
-      const services = await prisma.service.findMany({
-        select: {
-          name: true,
-          price: true,
-        },
-      });
+      let services: Array<{ name: string; price: number }> = [];
+      try {
+        services = await prisma.service.findMany({
+          select: {
+            name: true,
+            price: true,
+          },
+        });
+      } catch (dbError) {
+        console.error("[GET /api/customers] Error fetching services:", dbError);
+        // If services query fails, continue with empty array (non-critical)
+        services = [];
+      }
 
       const servicePriceMap = new Map(
         services.map((service) => [service.name, service.price])
@@ -79,7 +173,7 @@ export async function GET(request: NextRequest) {
       };
 
       // Calculate stats for single customer
-      const completedWalkIns = customer.walkIns.filter(
+      const completedWalkIns = customer.WalkIn.filter(
         (walkIn) => walkIn.status === "done" && walkIn.completedAt
       );
 
@@ -103,7 +197,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         {
           ...customer,
-          visitCount: customer._count.walkIns,
+          visitCount: customer._count.WalkIn,
           lifetimeValue,
           lastVisitDate: lastVisitDate?.toISOString() || null,
           daysSinceLastVisit,
@@ -143,42 +237,93 @@ export async function GET(request: NextRequest) {
     }
 
     // Get total count for pagination
-    const totalCount = await prisma.customer.count({ where });
+    let totalCount;
+    let customers;
+    
+    try {
+      totalCount = await prisma.customer.count({ where });
+    } catch (dbError) {
+      const errorMessage = dbError instanceof Error ? dbError.message : String(dbError);
+      console.error("[GET /api/customers] Error counting customers:", errorMessage);
+      
+      if (errorMessage.includes("does not exist") || 
+          errorMessage.includes("Unknown table") ||
+          (errorMessage.includes("relation") && errorMessage.includes("does not exist"))) {
+        return NextResponse.json(
+          { 
+            error: "Database schema error",
+            details: "Customer table may not exist. Please run migrations: npx prisma migrate dev",
+            code: "SCHEMA_ERROR"
+          },
+          { status: 500 }
+        );
+      }
+      
+      throw dbError;
+    }
 
     // Fetch customers with pagination
-    const customers = await prisma.customer.findMany({
-      where,
-      orderBy,
-      skip,
-      take: limit,
-      include: {
-        _count: {
-          select: {
-            walkIns: true,
+    try {
+      customers = await prisma.customer.findMany({
+        where,
+        orderBy,
+        skip,
+        take: limit,
+        include: {
+          _count: {
+            select: {
+              WalkIn: true,
+            },
+          },
+          WalkIn: {
+            select: {
+              id: true,
+              service: true,
+              status: true,
+              completedAt: true,
+            },
+            orderBy: {
+              completedAt: "desc",
+            },
+            take: 50, // Limit to last 50 walk-ins per customer for performance
           },
         },
-        walkIns: {
-          select: {
-            id: true,
-            service: true,
-            status: true,
-            completedAt: true,
+      });
+    } catch (dbError) {
+      const errorMessage = dbError instanceof Error ? dbError.message : String(dbError);
+      console.error("[GET /api/customers] Error fetching customers:", errorMessage);
+      
+      if (errorMessage.includes("does not exist") || 
+          errorMessage.includes("Unknown table") ||
+          (errorMessage.includes("relation") && errorMessage.includes("does not exist"))) {
+        return NextResponse.json(
+          { 
+            error: "Database schema error",
+            details: "Customer table may not exist. Please run migrations: npx prisma migrate dev",
+            code: "SCHEMA_ERROR"
           },
-          orderBy: {
-            completedAt: "desc",
-          },
-        },
-      },
-    });
+          { status: 500 }
+        );
+      }
+      
+      throw dbError;
+    }
 
     // Calculate lifetime value for each customer
     // Get all services to map service names to prices
-    const services = await prisma.service.findMany({
-      select: {
-        name: true,
-        price: true,
-      },
-    });
+    let services: Array<{ name: string; price: number }> = [];
+    try {
+      services = await prisma.service.findMany({
+        select: {
+          name: true,
+          price: true,
+        },
+      });
+    } catch (dbError) {
+      console.error("[GET /api/customers] Error fetching services for stats:", dbError);
+      // If services query fails, continue with empty array (non-critical)
+      services = [];
+    }
 
     // Create a map of service name to price for quick lookup
     const servicePriceMap = new Map(
@@ -194,10 +339,10 @@ export async function GET(request: NextRequest) {
     // Calculate visit count, lifetime value, last visit date, and reminder status
     const customersWithStats = customers.map((customer) => {
       // Count total visits (all walk-ins)
-      const visitCount = customer._count.walkIns;
+      const visitCount = customer._count.WalkIn;
 
       // Filter completed walk-ins
-      const completedWalkIns = customer.walkIns.filter(
+      const completedWalkIns = customer.WalkIn.filter(
         (walkIn) => walkIn.status === "done" && walkIn.completedAt
       );
 
@@ -267,39 +412,67 @@ export async function GET(request: NextRequest) {
     );
   } catch (error) {
     // Log detailed error for debugging
-    console.error("Error fetching customer:", error);
-    console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace");
-    console.error("Error name:", error instanceof Error ? error.name : "Unknown");
+    console.error("[GET /api/customers] ========== ERROR CAUGHT ==========");
+    console.error("[GET /api/customers] Error:", error);
+    console.error("[GET /api/customers] Error stack:", error instanceof Error ? error.stack : "No stack trace");
+    console.error("[GET /api/customers] Error name:", error instanceof Error ? error.name : "Unknown");
+    console.error("[GET /api/customers] DATABASE_URL exists:", !!process.env.DATABASE_URL);
+    console.error("[GET /api/customers] DATABASE_URL length:", process.env.DATABASE_URL?.length || 0);
     
     // Provide more specific error message
     const errorMessage = error instanceof Error 
       ? error.message 
       : String(error);
     
-    // Check if it's a Prisma error (e.g., table doesn't exist)
-    if (errorMessage.includes("does not exist") || 
-        errorMessage.includes("Unknown table") ||
-        errorMessage.includes("relation") && errorMessage.includes("does not exist")) {
-      console.error("Database table may not exist. Run migrations: npx prisma migrate dev");
+    const errorString = errorMessage.toLowerCase();
+    
+    // Check if DATABASE_URL is missing
+    if (!process.env.DATABASE_URL) {
       return NextResponse.json(
-        { error: "Database not initialized. Please run migrations." },
+        { 
+          error: "Database configuration error",
+          details: "DATABASE_URL environment variable is not set. Please configure your database connection.",
+          code: "MISSING_DATABASE_URL"
+        },
+        { status: 500 }
+      );
+    }
+    
+    // Check if it's a Prisma error (e.g., table doesn't exist)
+    if (errorString.includes("does not exist") || 
+        errorString.includes("unknown table") ||
+        (errorString.includes("relation") && errorString.includes("does not exist"))) {
+      console.error("[GET /api/customers] Database table may not exist. Run migrations: npx prisma migrate dev");
+      return NextResponse.json(
+        { 
+          error: "Database schema error",
+          details: "Database tables may not exist. Please run migrations: npx prisma migrate dev",
+          code: "SCHEMA_ERROR"
+        },
         { status: 500 }
       );
     }
     
     // Check for Prisma connection errors
-    if (errorMessage.includes("Can't reach database") || 
-        errorMessage.includes("P1001") ||
-        errorMessage.includes("connection")) {
-      console.error("Database connection error. Check DATABASE_URL.");
+    if (errorString.includes("can't reach database") || 
+        errorString.includes("p1001") ||
+        errorString.includes("connection") ||
+        errorString.includes("econnrefused") ||
+        errorString.includes("timeout")) {
+      console.error("[GET /api/customers] Database connection error. Check DATABASE_URL.");
       return NextResponse.json(
-        { error: "Database connection failed. Please check your database configuration." },
+        { 
+          error: "Database connection failed",
+          details: "Unable to connect to the database. Please check your DATABASE_URL and ensure the database server is running.",
+          code: "DATABASE_CONNECTION_ERROR",
+          suggestion: "If using Supabase, ensure you're using the connection pooler URL (port 6543) for serverless environments."
+        },
         { status: 500 }
       );
     }
     
     // Check for Prisma client errors
-    if (errorMessage.includes("P2002") || errorMessage.includes("Unique constraint")) {
+    if (errorString.includes("p2002") || errorString.includes("unique constraint")) {
       return NextResponse.json(
         { error: "Customer already exists" },
         { status: 409 }
@@ -307,7 +480,12 @@ export async function GET(request: NextRequest) {
     }
     
     return NextResponse.json(
-      { error: "Failed to fetch customer", details: errorMessage },
+      { 
+        error: "Failed to fetch customer", 
+        details: errorMessage,
+        code: "UNKNOWN_ERROR",
+        timestamp: new Date().toISOString()
+      },
       { status: 500 }
     );
   }
@@ -315,9 +493,102 @@ export async function GET(request: NextRequest) {
 
 // POST /api/customers - Create new customer
 export async function POST(request: NextRequest) {
+  // Outermost try-catch to ensure we ALWAYS return a JSON response
   try {
-    const body = await request.json();
-    const validatedData = customerSchema.parse(body);
+    console.log('[POST /api/customers] ========== REQUEST START ==========');
+    console.log('[POST /api/customers] Request received at:', new Date().toISOString());
+    console.log('[POST /api/customers] Request URL:', request.url);
+    console.log('[POST /api/customers] DATABASE_URL exists:', !!process.env.DATABASE_URL);
+    console.log('[POST /api/customers] DATABASE_URL length:', process.env.DATABASE_URL?.length || 0);
+
+    // Validate database connection before proceeding
+    if (!process.env.DATABASE_URL) {
+      console.error('[POST /api/customers] DATABASE_URL is not set');
+      return NextResponse.json(
+        { 
+          error: "Database configuration error",
+          details: "DATABASE_URL environment variable is not set. Please configure your database connection.",
+          code: "MISSING_DATABASE_URL"
+        },
+        { status: 500 }
+      );
+    }
+
+    // Test connection with a simple query first
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+    } catch (connectionError) {
+      const errorMessage = connectionError instanceof Error ? connectionError.message : String(connectionError);
+      console.error('[POST /api/customers] Database connection test failed:', errorMessage);
+      
+      // Check for specific connection error types
+      if (errorMessage.includes("Can't reach database") || 
+          errorMessage.includes("P1001") ||
+          errorMessage.includes("connection") ||
+          errorMessage.includes("ECONNREFUSED")) {
+        return NextResponse.json(
+          { 
+            error: "Database connection failed",
+            details: "Unable to connect to the database. Please check your DATABASE_URL and ensure the database server is running.",
+            code: "DATABASE_CONNECTION_ERROR",
+            suggestion: "If using Supabase, ensure you're using the connection pooler URL (port 6543) for serverless environments."
+          },
+          { status: 500 }
+        );
+      }
+
+      if (errorMessage.includes("does not exist") || 
+          errorMessage.includes("Unknown table") ||
+          (errorMessage.includes("relation") && errorMessage.includes("does not exist"))) {
+        return NextResponse.json(
+          { 
+            error: "Database schema error",
+            details: "Database tables may not exist. Please run migrations: npx prisma migrate dev",
+            code: "SCHEMA_ERROR"
+          },
+          { status: 500 }
+        );
+      }
+
+      // Generic connection error
+      return NextResponse.json(
+        { 
+          error: "Database error",
+          details: errorMessage,
+          code: "DATABASE_ERROR"
+        },
+        { status: 500 }
+      );
+    }
+  
+    let body;
+    try {
+      body = await request.json();
+    } catch (jsonError) {
+      console.error('[POST /api/customers] JSON parse error:', jsonError);
+      return NextResponse.json(
+        { error: "Invalid JSON in request body", details: "Please ensure your request body is valid JSON." },
+        { status: 400 }
+      );
+    }
+
+    // Validate request data
+    let validatedData;
+    try {
+      validatedData = customerSchema.parse(body);
+    } catch (validationError) {
+      if (validationError instanceof z.ZodError) {
+        console.error('[POST /api/customers] Zod validation error:', validationError.issues);
+        return NextResponse.json(
+          { 
+            error: "Validation error", 
+            details: validationError.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ')
+          },
+          { status: 400 }
+        );
+      }
+      throw validationError;
+    }
 
     // Validate and normalize phone number
     const normalizedPhone = validateAndNormalizePhone(validatedData.phone);
@@ -329,9 +600,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if customer already exists
-    const existingCustomer = await prisma.customer.findUnique({
-      where: { phone: normalizedPhone },
-    });
+    let existingCustomer;
+    try {
+      existingCustomer = await prisma.customer.findUnique({
+        where: { phone: normalizedPhone },
+      });
+    } catch (dbError) {
+      console.error('[POST /api/customers] Database error checking existing customer:', dbError);
+      return NextResponse.json(
+        { 
+          error: "Database error", 
+          details: "Unable to check if customer exists. Please try again.",
+          code: "DB_CHECK_ERROR"
+        },
+        { status: 500 }
+      );
+    }
 
     if (existingCustomer) {
       return NextResponse.json(
@@ -341,35 +625,138 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new customer
-    const customer = await prisma.customer.create({
-      data: {
-        phone: normalizedPhone,
-        name: validatedData.name.trim(),
-      },
+    let customer;
+    try {
+      // Generate a unique ID for the customer
+      // Using a simple approach: timestamp + random string
+      const generateId = () => {
+        const timestamp = Date.now().toString(36);
+        const random = Math.random().toString(36).substring(2, 11);
+        return `${timestamp}${random}`;
+      };
+      
+      customer = await prisma.customer.create({
+        data: {
+          id: generateId(),
+          phone: normalizedPhone,
+          name: validatedData.name.trim(),
+          email: validatedData.email?.trim() || null,
+          updatedAt: new Date(),
+        },
+      });
+    } catch (createError) {
+      console.error('[POST /api/customers] Database error creating customer:', createError);
+      
+      // Handle Prisma unique constraint violation
+      if (createError instanceof PrismaClientKnownRequestError && createError.code === "P2002") {
+        const target = createError.meta?.target as string[] | undefined;
+        if (target?.includes("phone")) {
+          return NextResponse.json(
+            { error: "Customer with this phone number already exists" },
+            { status: 409 }
+          );
+        }
+      }
+      
+      // Handle other Prisma errors
+      if (createError instanceof PrismaClientKnownRequestError) {
+        return NextResponse.json(
+          { 
+            error: "Database error", 
+            details: createError.message || "Failed to create customer in database.",
+            code: createError.code
+          },
+          { status: 500 }
+        );
+      }
+      
+      throw createError;
+    }
+
+    console.log('[POST /api/customers] Customer created successfully, returning response');
+    const successResponse = NextResponse.json(customer, { status: 201 });
+    console.log('[POST /api/customers] ========== REQUEST SUCCESS ==========');
+    return successResponse;
+  } catch (error) {
+    // Log error details for debugging
+    console.error('[POST /api/customers] ========== ERROR CAUGHT ==========');
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorName = error instanceof Error ? error.name : 'UnknownError';
+    
+    console.error('[POST /api/customers] Error details:', {
+      name: errorName,
+      message: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
+      errorType: typeof error,
     });
 
-    return NextResponse.json(customer, { status: 201 });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
+    // Always return a proper JSON error response
+    // Check for common error types
+    const errorString = errorMessage.toLowerCase();
+    
+    if (errorString.includes("can't reach database") || 
+        errorString.includes("p1001") ||
+        errorString.includes("connection") ||
+        errorString.includes("connect econnrefused") ||
+        errorString.includes("timeout")) {
       return NextResponse.json(
-        { error: "Validation error", details: error.issues },
-        { status: 400 }
+        { 
+          error: "Database connection failed",
+          details: "Unable to connect to the database. Please check your DATABASE_URL environment variable."
+        },
+        { status: 500 }
       );
     }
-
-    // Handle unique constraint violation
-    if (error instanceof Error && error.message.includes("Unique constraint")) {
+    
+    if (errorString.includes("does not exist") || 
+        errorString.includes("unknown table") ||
+        (errorString.includes("relation") && errorString.includes("does not exist"))) {
       return NextResponse.json(
-        { error: "Customer with this phone number already exists" },
-        { status: 409 }
+        { 
+          error: "Database schema error",
+          details: "The database tables may not exist. Please run: npx prisma migrate dev"
+        },
+        { status: 500 }
       );
     }
-
-    console.error("Error creating customer:", error);
-    return NextResponse.json(
-      { error: "Failed to create customer" },
-      { status: 500 }
-    );
+    
+    // Generic error response - ensure we always return valid JSON
+    const errorResponse = {
+      error: "Failed to create customer",
+      details: errorMessage || "An unexpected error occurred. Please try again.",
+      timestamp: new Date().toISOString(),
+    };
+    
+    console.log('[POST /api/customers] Returning error response:', {
+      status: 500,
+      hasError: !!errorResponse.error,
+      hasDetails: !!errorResponse.details,
+    });
+    
+    try {
+      const response = NextResponse.json(errorResponse, { status: 500 });
+      console.log('[POST /api/customers] Error response created successfully');
+      console.log('[POST /api/customers] ========== REQUEST END (ERROR) ==========');
+      return response;
+    } catch (responseError) {
+      // If creating JSON response fails, return a plain text JSON response
+      console.error('[POST /api/customers] Failed to create JSON response:', responseError);
+      const fallbackResponse = new NextResponse(
+        JSON.stringify({
+          error: "Internal server error",
+          details: "Failed to create customer. Please try again.",
+          timestamp: new Date().toISOString(),
+        }),
+        {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      console.log('[POST /api/customers] ========== REQUEST END (FALLBACK ERROR) ==========');
+      return fallbackResponse;
+    }
   }
 }
 

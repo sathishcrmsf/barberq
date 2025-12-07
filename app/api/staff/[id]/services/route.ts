@@ -43,12 +43,13 @@ export async function POST(
       serviceIds.map(serviceId =>
         prisma.staffService.create({
           data: {
+            id: crypto.randomUUID(),
             staffId: id,
             serviceId,
             isPrimary: serviceId === primaryServiceId,
           },
           include: {
-            service: true
+            Service: true
           }
         })
       )
@@ -80,11 +81,11 @@ export async function GET(
     const staffServices = await prisma.staffService.findMany({
       where: { staffId: id },
       include: {
-        service: true
+        Service: true
       },
       orderBy: [
         { isPrimary: 'desc' },
-        { service: { name: 'asc' } }
+        { Service: { name: 'asc' } }
       ]
     });
 

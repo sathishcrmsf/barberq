@@ -163,7 +163,7 @@ export async function predictNoShows(): Promise<{
         gte: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000),
       },
     },
-    include: { customer: true },
+    include: { Customer: true },
   });
 
   for (const history of customerHistory) {
@@ -260,7 +260,7 @@ export async function detectUpsellOpportunities(): Promise<{
   const customerHistory = await InsightQueries.getCustomerHistory(undefined, 365);
   const allServices = await prisma.service.findMany({
     where: { isActive: true },
-    include: { category: true },
+    include: { Category: true },
   });
 
   // Define basic vs premium services (services below average price are basic)
@@ -338,7 +338,7 @@ export async function detectUpsellOpportunities(): Promise<{
       description: `${highConfidenceCount} customers ready for premium services`,
       emoji: "💰",
       priority: InsightPriority.MEDIUM,
-      value: `$${totalPotentialRevenue} potential`,
+      value: `₹${totalPotentialRevenue} potential`,
       actionable: true,
       actionLabel: "View Opportunities",
       actionUrl: "/customers?filter=upsell",

@@ -1,114 +1,99 @@
-// @cursor v1.3: Enhanced schema with Categories, Staff, and Staff-Service assignments.
-// This enables service organization, staff-skill matching, and analytics capabilities.
-// Service.name must be unique. WalkIn stores service name as string (denormalized).
-// @cursor v1.4: Added Customer model for phone-based customer management.
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-// Customer records identified by phone number
-model Customer {
-  id        String   @id @default(cuid())
-  phone     String   @unique // Format: +91XXXXXXXXXX
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  walkIns   WalkIn[]
-}
-
-// Walk-in customer queue
-model WalkIn {
-  id           String    @id @default(cuid())
-  customerId   String?   // Link to Customer (optional for migration compatibility)
-  customer     Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  customerName String?   // Legacy field, kept for backward compatibility
-  service      String    // Service name (denormalized)
-  barberName   String?   // Legacy field
-  staffId      String?   // v1.3: Link to Staff member
-  staff        Staff?    @relation(fields: [staffId], references: [id], onDelete: SetNull)
-  status       String    @default("waiting")
-  notes        String?
-  createdAt    DateTime  @default(now())
-  startedAt    DateTime?
-  completedAt  DateTime? // When service was marked as done
-
-  // Performance indexes for frequently queried fields
-  @@index([status])
-  @@index([createdAt])
-  @@index([customerId])
-  @@index([staffId])
-  @@index([status, createdAt]) // Composite index for common query pattern
-}
-
-// Service categories for organization
 model Category {
-  id           String    @id @default(cuid())
+  id           String    @id
   name         String    @unique
   description  String?
-  icon         String?   // Lucide icon name
+  icon         String?
   displayOrder Int       @default(0)
   isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  
-  services     Service[]
+  updatedAt    DateTime
+  Service      Service[]
 }
 
-// Services catalog
+model Customer {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  email     String?
+  WalkIn    WalkIn[]
+}
+
 model Service {
-  id           String         @id @default(cuid())
+  id           String         @id
   name         String         @unique
   price        Float
-  duration     Int            // in minutes
+  duration     Int
   description  String?
-  imageUrl     String?        // v1.3: Service image (base64 or URL)
-  thumbnailUrl String?        // v1.3: Thumbnail for list views
-  imageAlt     String?        // v1.3: Accessibility description
-  categoryId   String?        // v1.3: Optional category link
-  category     Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   isActive     Boolean        @default(true)
   createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  
-  staffServices StaffService[]
+  updatedAt    DateTime
+  categoryId   String?
+  imageUrl     String?
+  thumbnailUrl String?
+  imageAlt     String?
+  Category     Category?      @relation(fields: [categoryId], references: [id])
+  StaffService StaffService[]
 }
 
-// Staff members
 model Staff {
-  id           String         @id @default(cuid())
+  id           String         @id
   name         String
-  title        String?        // e.g., "Senior Barber", "Master Stylist"
+  title        String?
   email        String?
   phone        String?
-  imageUrl     String?        // Staff photo
+  imageUrl     String?
   bio          String?
   displayOrder Int            @default(0)
   isActive     Boolean        @default(true)
   createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  
-  staffServices StaffService[]
-  walkIns       WalkIn[]
+  updatedAt    DateTime
+  StaffService StaffService[]
+  WalkIn       WalkIn[]
 }
 
-// Staff-Service assignment (many-to-many)
 model StaffService {
-  id              String   @id @default(cuid())
+  id              String   @id
   staffId         String
-  staff           Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
   serviceId       String
-  service         Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  isPrimary       Boolean  @default(false) // Indicates specialty
+  isPrimary       Boolean  @default(false)
   yearsExperience Int?
   createdAt       DateTime @default(now())
-  
-  @@unique([staffId, serviceId]) // Prevent duplicate assignments
+  Service         Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  Staff           Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, serviceId])
 }
 
+model WalkIn {
+  id           String    @id
+  customerName String?
+  service      String
+  status       String    @default("waiting")
+  notes        String?
+  createdAt    DateTime  @default(now())
+  barberName   String?
+  startedAt    DateTime?
+  customerId   String?
+  completedAt  DateTime?
+  staffId      String?
+  Customer     Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  Staff        Staff?    @relation(fields: [staffId], references: [id])
+
+  @@index([createdAt])
+  @@index([customerId])
+  @@index([staffId])
+  @@index([status, createdAt])
+  @@index([status])
+}

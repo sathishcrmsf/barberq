@@ -24,11 +24,11 @@ export async function GET(
     const category = await prisma.category.findUnique({
       where: { id },
       include: {
-        services: {
+        Service: {
           orderBy: { name: 'asc' }
         },
         _count: {
-          select: { services: true }
+          select: { Service: true }
         }
       }
     });
@@ -97,7 +97,7 @@ export async function PATCH(
       data: validatedData,
       include: {
         _count: {
-          select: { services: true }
+          select: { Service: true }
         }
       }
     });
@@ -130,7 +130,7 @@ export async function DELETE(
       where: { id },
       include: {
         _count: {
-          select: { services: true }
+          select: { Service: true }
         }
       }
     });
@@ -150,7 +150,7 @@ export async function DELETE(
     });
 
     return NextResponse.json(
-      { message: 'Category deleted successfully', serviceCount: category._count.services },
+      { message: 'Category deleted successfully', serviceCount: category._count.Service },
       { status: 200 }
     );
   } catch (error) {

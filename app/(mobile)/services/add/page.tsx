@@ -68,7 +68,7 @@ export default function AddServicePage() {
     } else if (priceNum < 0) {
       newErrors.price = "Price must be positive";
     } else if (priceNum > 9999.99) {
-      newErrors.price = "Price too high (max $9999.99)";
+      newErrors.price = "Price too high (max ₹9999.99)";
     }
 
     const durationNum = parseInt(formData.duration);
@@ -196,10 +196,10 @@ export default function AddServicePage() {
           {/* Price Field */}
           <div className="mb-4 sm:mb-5">
             <label htmlFor="price" className="block text-sm sm:text-base font-medium mb-2">
-              Price (USD) *
+              Price (INR) *
             </label>
             <div className="relative">
-              <span className="absolute left-4 top-3 text-gray-500 text-base">$</span>
+              <span className="absolute left-4 top-3 text-gray-500 text-base">₹</span>
               <input
                 id="price"
                 type="number"

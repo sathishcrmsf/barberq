@@ -68,16 +68,29 @@ export default function AnalyticsPage() {
     fetchAnalytics();
   }, [fetchAnalytics]);
 
-  if (loading) {
+  // Show loading state immediately with skeleton
+  if (loading && !data) {
     return (
       <div className="min-h-screen bg-gray-50 pb-32">
         <div className="sticky top-0 z-10 bg-white border-b shadow-sm">
           <div className="flex items-center justify-between px-4 py-3">
-            <h1 className="text-xl font-bold">Analytics</h1>
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="sm" onClick={() => window.history.back()}>
+                ← Back
+              </Button>
+              <h1 className="text-xl font-bold">Analytics</h1>
+            </div>
           </div>
         </div>
         <div className="p-4">
-          <div className="text-center py-8 text-gray-500">Loading analytics...</div>
+          <div className="space-y-4">
+            <div className="h-24 bg-gray-200 rounded-lg animate-pulse"></div>
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="h-32 bg-gray-200 rounded-lg animate-pulse"></div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -134,7 +147,7 @@ export default function AnalyticsPage() {
           <h2 className="text-sm font-semibold text-gray-700 mb-3">OVERVIEW</h2>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <div className="text-2xl font-bold">${data.overallStats.totalRevenue.toFixed(0)}</div>
+              <div className="text-2xl font-bold">₹{data.overallStats.totalRevenue.toFixed(0)}</div>
               <div className="text-xs text-gray-600">Revenue</div>
             </div>
             <div>
@@ -182,7 +195,7 @@ export default function AnalyticsPage() {
 
                       <div className="grid grid-cols-3 gap-2 text-sm mb-2">
                         <div>
-                          <div className="font-semibold">${service.totalRevenue.toFixed(0)}</div>
+                          <div className="font-semibold">₹{service.totalRevenue.toFixed(0)}</div>
                           <div className="text-xs text-gray-600">Revenue</div>
                         </div>
                         <div>
@@ -234,7 +247,7 @@ export default function AnalyticsPage() {
                     <div>
                       <h3 className="font-semibold">{service.serviceName}</h3>
                       <div className="text-sm text-gray-600">
-                        {service.completedBookings} bookings • ${service.totalRevenue.toFixed(0)} revenue
+                        {service.completedBookings} bookings • ₹{service.totalRevenue.toFixed(0)} revenue
                       </div>
                     </div>
                     <span className="text-xs px-2 py-0.5 bg-orange-200 text-orange-800 rounded-full">
@@ -277,7 +290,7 @@ export default function AnalyticsPage() {
                   <div>
                     <div className="font-medium text-sm">{service.serviceName}</div>
                     <div className="text-xs text-gray-600">
-                      {service.completedBookings} bookings • ${service.totalRevenue.toFixed(0)}
+                      {service.completedBookings} bookings • ₹{service.totalRevenue.toFixed(0)}
                     </div>
                   </div>
                   <div className="text-right">

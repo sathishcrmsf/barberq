@@ -25,7 +25,7 @@ export async function GET() {
       ],
       include: {
         _count: {
-          select: { services: true }
+          select: { Service: true }
         }
       }
     });
@@ -64,10 +64,14 @@ export async function POST(request: NextRequest) {
     }
 
     const category = await prisma.category.create({
-      data: validatedData,
+      data: {
+        ...validatedData,
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
+      },
       include: {
         _count: {
-          select: { services: true }
+          select: { Service: true }
         }
       }
     });

@@ -16,17 +16,17 @@ export interface Staff {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-  staffServices?: {
+  StaffService?: {
     id: string;
-    service: {
+    Service: {
       id: string;
       name: string;
     };
     isPrimary: boolean;
   }[];
   _count?: {
-    staffServices: number;
-    walkIns: number;
+    StaffService: number;
+    WalkIn: number;
   };
 }
 

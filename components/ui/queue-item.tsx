@@ -72,7 +72,12 @@ export function QueueItem({
           <h3 className="text-base font-semibold text-gray-900 truncate">
             {toTitleCase(customerName)}
           </h3>
-          <p className="text-sm text-gray-600">{service}</p>
+          {service && service !== "TBD" && (
+            <p className="text-sm text-gray-600">{service}</p>
+          )}
+          {(!service || service === "TBD") && status === "waiting" && (
+            <p className="text-sm text-gray-400 italic">Service to be selected</p>
+          )}
           {notes && (
             <p className="text-xs text-gray-500 mt-0.5 italic">{notes}</p>
           )}

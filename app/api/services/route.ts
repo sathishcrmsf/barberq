@@ -26,35 +26,38 @@ export async function GET() {
         createdAt: "desc"
       },
       include: {
-        category: true,
-        staffServices: {
+        Category: true,
+        StaffService: {
           include: {
-            staff: true
+            Staff: true
           }
         },
         _count: {
-          select: { staffServices: true }
+          select: { StaffService: true }
         }
       }
     });
 
-    // Calculate usage count for each service from WalkIn records
-    const walkIns = await prisma.walkIn.findMany({
-      select: {
-        service: true
-      }
-    });
+    // Calculate usage count efficiently using database aggregation
+    // Get usage counts for all services in parallel
+    const usageCounts = await Promise.all(
+      services.map(async (service) => {
+        const count = await prisma.walkIn.count({
+          where: { service: service.name }
+        });
+        return { serviceName: service.name, count };
+      })
+    );
 
-    // Count usage per service name (denormalized field)
-    const usageMap = walkIns.reduce((acc, walkIn) => {
-      acc[walkIn.service] = (acc[walkIn.service] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    // Create usage map
+    const usageMap = new Map(
+      usageCounts.map(({ serviceName, count }) => [serviceName, count])
+    );
 
     // Add usage count to each service
     const servicesWithUsage = services.map(service => ({
       ...service,
-      usageCount: usageMap[service.name] || 0
+      usageCount: usageMap.get(service.name) || 0
     }));
 
     // Sort by usage count to find top 5
@@ -102,6 +105,7 @@ export async function POST(request: Request) {
     // Create service
     const service = await prisma.service.create({
       data: {
+        id: crypto.randomUUID(),
         name: validated.name,
         price: validated.price,
         duration: validated.duration,
@@ -109,14 +113,15 @@ export async function POST(request: Request) {
         imageUrl: validated.imageUrl,
         thumbnailUrl: validated.thumbnailUrl,
         imageAlt: validated.imageAlt,
-        categoryId: validated.categoryId,
-        isActive: true
+        ...(validated.categoryId && { categoryId: validated.categoryId }),
+        isActive: true,
+        updatedAt: new Date(),
       },
       include: {
-        category: true,
-        staffServices: {
+        Category: true,
+        StaffService: {
           include: {
-            staff: true
+            Staff: true
           }
         }
       }
@@ -126,6 +131,7 @@ export async function POST(request: Request) {
     if (validated.staffIds && validated.staffIds.length > 0) {
       await prisma.staffService.createMany({
         data: validated.staffIds.map((staffId) => ({
+          id: crypto.randomUUID(),
           serviceId: service.id,
           staffId,
           isPrimary: false,
@@ -137,10 +143,10 @@ export async function POST(request: Request) {
     const completeService = await prisma.service.findUnique({
       where: { id: service.id },
       include: {
-        category: true,
-        staffServices: {
+        Category: true,
+        StaffService: {
           include: {
-            staff: true
+            Staff: true
           }
         }
       }

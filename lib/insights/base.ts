@@ -100,12 +100,14 @@ export class InsightQueries {
       customerId: customerId ? { equals: customerId } : { not: null },
     };
 
+    // Limit to last 1000 walk-ins for performance (still enough for accurate insights)
     const walkIns = await prisma.walkIn.findMany({
       where: whereClause,
       include: {
-        customer: true,
+        Customer: true,
       },
       orderBy: { createdAt: "desc" },
+      take: 1000, // Performance optimization: limit data fetched
     });
 
     // Get all services once (optimization)
@@ -116,14 +118,14 @@ export class InsightQueries {
     const customerMap = new Map<string, CustomerHistory>();
 
     for (const walkIn of walkIns) {
-      if (!walkIn.customerId || !walkIn.customer) continue;
+      if (!walkIn.customerId || !walkIn.Customer) continue;
 
       const customerId = walkIn.customerId;
       if (!customerMap.has(customerId)) {
         customerMap.set(customerId, {
           customerId,
-          customerName: walkIn.customer.name,
-          phone: walkIn.customer.phone,
+          customerName: walkIn.Customer.name,
+          phone: walkIn.Customer.phone,
           totalVisits: 0,
           completedVisits: 0,
           lastVisitDate: null,
@@ -220,39 +222,43 @@ export class InsightQueries {
 
     const services = await prisma.service.findMany({
       where: { isActive: true },
-      include: { category: true },
+      include: { Category: true },
     });
 
-    const walkIns = await prisma.walkIn.findMany({
-      where: {
-        createdAt: { gte: previousStartDate },
-      },
-    });
-
+    // Use database aggregations instead of fetching all walk-ins
     const trends: ServiceTrend[] = [];
 
     for (const service of services) {
-      const serviceWalkIns = walkIns.filter(
-        (w) => w.service === service.name
-      );
-      const completedWalkIns = serviceWalkIns.filter(
-        (w) => w.status === "done"
-      );
-
-      const thisPeriodWalkIns = serviceWalkIns.filter(
-        (w) => w.createdAt >= startDate
-      );
-      const lastPeriodWalkIns = serviceWalkIns.filter(
-        (w) =>
-          w.createdAt >= previousStartDate && w.createdAt < startDate
-      );
-
-      const bookingsThisPeriod = thisPeriodWalkIns.filter(
-        (w) => w.status === "done"
-      ).length;
-      const bookingsLastPeriod = lastPeriodWalkIns.filter(
-        (w) => w.status === "done"
-      ).length;
+      // Count bookings using database queries (much faster)
+      const [totalBookings, completedBookings, bookingsThisPeriod, bookingsLastPeriod] = await Promise.all([
+        prisma.walkIn.count({
+          where: {
+            service: service.name,
+            createdAt: { gte: previousStartDate }
+          }
+        }),
+        prisma.walkIn.count({
+          where: {
+            service: service.name,
+            status: "done",
+            createdAt: { gte: previousStartDate }
+          }
+        }),
+        prisma.walkIn.count({
+          where: {
+            service: service.name,
+            status: "done",
+            createdAt: { gte: startDate }
+          }
+        }),
+        prisma.walkIn.count({
+          where: {
+            service: service.name,
+            status: "done",
+            createdAt: { gte: previousStartDate, lt: startDate }
+          }
+        })
+      ]);
 
       const growthRate =
         bookingsLastPeriod > 0
@@ -262,22 +268,22 @@ export class InsightQueries {
           ? 100
           : 0;
 
-      const totalRevenue = completedWalkIns.length * service.price;
+      const totalRevenue = completedBookings * service.price;
 
       trends.push({
         serviceId: service.id,
         serviceName: service.name,
         price: service.price,
         duration: service.duration,
-        totalBookings: serviceWalkIns.length,
-        completedBookings: completedWalkIns.length,
+        totalBookings,
+        completedBookings,
         totalRevenue,
         bookingsThisPeriod,
         bookingsLastPeriod,
         growthRate: Math.round(growthRate * 10) / 10,
         averageRevenuePerBooking:
-          completedWalkIns.length > 0
-            ? totalRevenue / completedWalkIns.length
+          completedBookings > 0
+            ? totalRevenue / completedBookings
             : 0,
       });
     }
@@ -298,15 +304,17 @@ export class InsightQueries {
       where: { isActive: true },
     });
 
+    // Limit walk-ins fetched for performance (still enough for accurate metrics)
     const walkIns = await prisma.walkIn.findMany({
       where: {
         createdAt: { gte: startDate },
         staffId: { not: null },
       },
       include: {
-        customer: true,
-        staff: true,
+        Customer: true,
+        Staff: true,
       },
+      take: 2000, // Performance optimization: limit data fetched
     });
 
     const services = await prisma.service.findMany();

@@ -24,14 +24,17 @@ import {
   List,
   Grid,
   ArrowUpDown,
-  Loader2
+  Loader2,
+  Mail
 } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
+import { CustomerModal } from "@/components/admin/customers/customer-modal";
 
 interface Customer {
   id: string;
   phone: string;
   name: string;
+  email?: string | null;
   createdAt: string;
   visitCount?: number;
   lifetimeValue?: number;
@@ -72,6 +75,7 @@ export default function CustomersPage() {
   const [sortBy, setSortBy] = useState<SortOption>("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [pagination, setPagination] = useState<PaginationInfo>({
     page: 1,
     limit: 50,
@@ -113,7 +117,18 @@ export default function CustomersPage() {
       }
 
       const res = await fetch(`/api/customers?${params.toString()}`);
-      if (!res.ok) throw new Error("Failed to fetch customers");
+      if (!res.ok) {
+        // Try to get error message from response
+        let errorMessage = "Failed to fetch customers";
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.error || errorData.details || errorMessage;
+        } catch {
+          // If response is not JSON, use status text
+          errorMessage = `Failed to fetch customers (${res.status} ${res.statusText})`;
+        }
+        throw new Error(errorMessage);
+      }
       const data = await res.json();
 
       if (data.customers && data.pagination) {
@@ -335,6 +350,45 @@ export default function CustomersPage() {
     window.location.href = `tel:${phone}`;
   };
 
+  // Show loading state immediately
+  if (loading && customers.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-32">
+        <div className="sticky top-0 z-20 bg-white border-b shadow-sm">
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <Link href="/dashboard">
+                  <Button variant="ghost" size="icon">
+                    <ArrowLeft className="w-5 h-5" />
+                  </Button>
+                </Link>
+                <div>
+                  <h1 className="text-xl font-bold">Customers</h1>
+                  <p className="text-xs text-gray-600">Loading...</p>
+                </div>
+              </div>
+              <Button 
+                size="sm" 
+                className="bg-black text-white hover:bg-gray-900"
+                onClick={() => setIsCustomerModalOpen(true)}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create
+              </Button>
+            </div>
+          </div>
+        </div>
+        <div className="px-4 py-8">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto text-gray-400 mb-2" />
+            <p className="text-gray-500">Loading customers...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 pb-32">
       {/* Header */}
@@ -373,6 +427,14 @@ export default function CustomersPage() {
                 onClick={() => setShowFilters(!showFilters)}
               >
                 <Filter className="w-5 h-5" />
+              </Button>
+              <Button 
+                size="sm" 
+                className="bg-black text-white hover:bg-gray-900"
+                onClick={() => setIsCustomerModalOpen(true)}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create
               </Button>
             </div>
           </div>
@@ -496,12 +558,7 @@ export default function CustomersPage() {
 
       {/* Content */}
       <div className="px-4 pb-24">
-        {loading && customers.length === 0 ? (
-          <div className="text-center py-8">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto text-gray-400 mb-2" />
-            <p className="text-gray-500">Loading customers...</p>
-          </div>
-        ) : filteredCustomers.length === 0 ? (
+        {filteredCustomers.length === 0 ? (
           <EmptyState
             icon={Users}
             title={
@@ -514,14 +571,14 @@ export default function CustomersPage() {
             description={
               searchQuery
                 ? "Try adjusting your search query"
-                : "Customers will appear here once they register using their mobile number when adding a walk-in."
+                : "Add your first customer to get started. Customers are created automatically when you add them to the queue."
             }
-            actionLabel={searchQuery ? "Clear Search" : "Go to Queue"}
+            actionLabel={searchQuery ? "Clear Search" : "Add Customer"}
             onAction={() => {
               if (searchQuery) {
                 setSearchQuery("");
               } else {
-                router.push("/queue");
+                setIsCustomerModalOpen(true);
               }
             }}
           />
@@ -550,6 +607,15 @@ export default function CustomersPage() {
                         </div>
                         <div className="flex items-center gap-3 text-xs text-gray-600 mt-1 flex-wrap">
                           <span>{formatPhone(customer.phone)}</span>
+                          {customer.email && (
+                            <>
+                              <span>•</span>
+                              <span className="truncate max-w-[120px]" title={customer.email}>
+                                <Mail className="w-3 h-3 inline mr-1" />
+                                {customer.email}
+                              </span>
+                            </>
+                          )}
                           <span>•</span>
                           <span>{customer.visitCount ?? 0} visits</span>
                           <span>•</span>
@@ -620,6 +686,17 @@ export default function CustomersPage() {
                                 {formatPhone(customer.phone)}
                               </a>
                             </div>
+                            {customer.email && (
+                              <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                                <Mail className="w-4 h-4 text-gray-400" />
+                                <a
+                                  href={`mailto:${customer.email}`}
+                                  className="hover:text-blue-600 truncate"
+                                >
+                                  {customer.email}
+                                </a>
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -735,6 +812,16 @@ export default function CustomersPage() {
           </>
         )}
       </div>
+
+      {/* Customer Modal */}
+      <CustomerModal
+        isOpen={isCustomerModalOpen}
+        onClose={() => setIsCustomerModalOpen(false)}
+        onSuccess={() => {
+          // Refresh customer list
+          fetchCustomers(1, false);
+        }}
+      />
     </div>
   );
 }

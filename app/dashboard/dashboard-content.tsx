@@ -5,13 +5,14 @@ import { prisma } from "@/lib/prisma";
 import { DashboardClient } from "./dashboard-client";
 
 async function fetchDashboardData() {
-  // Get today's start time
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
+  try {
+    // Get today's start time
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
 
-  // Fetch only essential data in parallel - optimized for speed
-  // Skip historical data - only fetch what's needed for dashboard
-  const [completedToday, inProgressToday, waitingWalkIns, services, staff] = await Promise.all([
+    // Fetch only essential data in parallel - optimized for speed
+    // Skip historical data - only fetch what's needed for dashboard
+    const [completedToday, inProgressToday, waitingWalkIns, services, staff] = await Promise.all([
     // Get completed today
     prisma.walkIn.findMany({
       where: {
@@ -84,9 +85,18 @@ async function fetchDashboardData() {
     inProgressToday.some((w) => w.staffId === s.id)
   ).length;
 
+  // Create a service price map for accurate revenue calculation
+  // Use both exact match and case-insensitive match for robustness
+  const servicePriceMap = new Map(services.map(s => [s.name, s.price]));
+  const servicePriceMapLower = new Map(services.map(s => [s.name.toLowerCase().trim(), s.price]));
+  
+  // Calculate revenue from all completed walk-ins today
   const revenueToday = completedToday.reduce((sum, w) => {
-    const service = services.find((s) => s.name === w.service);
-    return sum + (service?.price || 0);
+    // Try exact match first, then case-insensitive match
+    const price = servicePriceMap.get(w.service) || 
+                  servicePriceMapLower.get(w.service.toLowerCase().trim()) || 
+                  0;
+    return sum + price;
   }, 0);
 
   // Generate insights (simplified for performance)
@@ -164,10 +174,51 @@ async function fetchDashboardData() {
     insights: allInsights,
     queueStatus,
   };
+  } catch (error) {
+    console.error("Error in fetchDashboardData:", error);
+    throw error; // Re-throw to be caught by component error boundary
+  }
 }
 
 export async function DashboardContent() {
-  const data = await fetchDashboardData();
-  return <DashboardClient initialData={data} />;
+  try {
+    const data = await fetchDashboardData();
+    return <DashboardClient initialData={data} />;
+  } catch (error) {
+    console.error("Error fetching dashboard data:", error);
+    
+    // Return error state with empty data
+    const errorData = {
+      kpis: {
+        queueCount: 0,
+        avgWaitTime: 0,
+        staffActive: 0,
+        inProgressToday: 0,
+        revenueToday: 0,
+      },
+      insights: [],
+      queueStatus: {
+        nowServing: undefined,
+        nextUp: undefined,
+        estimatedWait: 0,
+        queueCount: 0,
+      },
+    };
+
+    // Log detailed error for debugging
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const isDatabaseError = 
+      errorMessage.includes("Can't reach database") || 
+      errorMessage.includes("database server") ||
+      errorMessage.includes("P1001") ||
+      errorMessage.includes("connection");
+
+    if (isDatabaseError) {
+      console.error("Database connection error. Check DATABASE_URL and ensure database is accessible.");
+    }
+
+    // Still render the dashboard with empty data so the UI doesn't crash
+    return <DashboardClient initialData={errorData} />;
+  }
 }
 

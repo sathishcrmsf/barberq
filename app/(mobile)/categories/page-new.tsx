@@ -170,7 +170,7 @@ export default function CategoriesPageNew() {
                             )}
                             <div className="flex items-center gap-4 text-sm">
                               <span className="text-gray-500">
-                                {category._count?.services || 0} services
+                                {category._count?.Service || 0} services
                               </span>
                               <span className="text-gray-300">•</span>
                               <span className="text-gray-500">
@@ -247,7 +247,7 @@ export default function CategoriesPageNew() {
                               <CategoryBadge name="Inactive" variant="outline" />
                             </div>
                             <p className="text-sm text-gray-500">
-                              {category._count?.services || 0} services
+                              {category._count?.Service || 0} services
                             </p>
                           </div>
 

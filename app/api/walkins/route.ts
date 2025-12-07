@@ -11,8 +11,7 @@ import { validateAndNormalizePhone } from "@/lib/utils";
 const walkInSchema = z.object({
   phone: z.string().min(1, "Phone number is required"),
   name: z.string().min(1, "Customer name is required"),
-  barberName: z.string().optional(),
-  service: z.string().min(1, "Service is required"),
+  service: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -21,9 +20,21 @@ const walkInSchema = z.object({
 // GET /api/walkins - Get all walk-ins
 export async function GET() {
   try {
+    // Ensure prisma is available
+    if (!prisma) {
+      return NextResponse.json(
+        { 
+          error: "Database connection not available",
+          details: "Prisma client is not initialized"
+        },
+        { status: 503 }
+      );
+    }
+
     const walkIns = await prisma.walkIn.findMany({
       include: {
-        customer: true,
+        Customer: true,
+        Staff: true,
       },
       orderBy: {
         createdAt: "asc",
@@ -33,8 +44,39 @@ export async function GET() {
     return NextResponse.json(walkIns, { status: 200 });
   } catch (error) {
     console.error("Error fetching walk-ins:", error);
+    
+    // Handle Prisma-specific errors
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    console.error("Full error details:", { errorMessage, errorStack });
+    
+    const isConnectionError = 
+      errorMessage.includes("Can't reach database") ||
+      errorMessage.includes("P1001") ||
+      errorMessage.includes("connection") ||
+      errorMessage.includes("timeout") ||
+      errorMessage.includes("ECONNREFUSED") ||
+      errorMessage.includes("DATABASE_URL") ||
+      errorMessage.includes("Unknown field");
+
+    if (isConnectionError) {
+      return NextResponse.json(
+        { 
+          error: "Database connection failed",
+          details: "Unable to connect to the database. Please check your DATABASE_URL and ensure the database server is running.",
+          message: process.env.NODE_ENV === "development" ? errorMessage : undefined
+        },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
-      { error: "Failed to fetch walk-ins" },
+      { 
+        error: "Failed to fetch walk-ins",
+        details: process.env.NODE_ENV === "development" ? errorMessage : "An error occurred while fetching walk-ins",
+        message: process.env.NODE_ENV === "development" ? errorMessage : undefined
+      },
       { status: 500 }
     );
   }
@@ -62,10 +104,19 @@ export async function POST(request: NextRequest) {
 
     if (!customer) {
       // Create new customer
+      // Generate a unique ID for the customer
+      const generateId = () => {
+        const timestamp = Date.now().toString(36);
+        const random = Math.random().toString(36).substring(2, 11);
+        return `${timestamp}${random}`;
+      };
+      
       customer = await prisma.customer.create({
         data: {
+          id: generateId(),
           phone: normalizedPhone,
           name: validatedData.name.trim(),
+          updatedAt: new Date(),
         },
       });
     } else {
@@ -80,18 +131,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Generate a unique ID for the walk-in
+    const generateId = () => {
+      const timestamp = Date.now().toString(36);
+      const random = Math.random().toString(36).substring(2, 11);
+      return `${timestamp}${random}`;
+    };
+
     // Create walk-in with customerId
     const walkIn = await prisma.walkIn.create({
       data: {
+        id: generateId(),
         customerId: customer.id,
         customerName: customer.name, // Keep for backward compatibility
-        barberName: validatedData.barberName,
-        service: validatedData.service,
+        service: validatedData.service || "TBD", // Placeholder until service is selected
         notes: validatedData.notes,
         status: "waiting",
       },
       include: {
-        customer: true,
+        Customer: true,
       },
     });
 
@@ -105,8 +163,39 @@ export async function POST(request: NextRequest) {
     }
 
     console.error("Error creating walk-in:", error);
+    
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    console.error("Full error details:", { errorMessage, errorStack });
+    
+    // Check for Prisma-specific errors
+    const isConnectionError = 
+      errorMessage.includes("Can't reach database") ||
+      errorMessage.includes("P1001") ||
+      errorMessage.includes("connection") ||
+      errorMessage.includes("timeout") ||
+      errorMessage.includes("ECONNREFUSED") ||
+      errorMessage.includes("DATABASE_URL") ||
+      errorMessage.includes("Unknown field");
+
+    if (isConnectionError) {
+      return NextResponse.json(
+        { 
+          error: "Database connection failed",
+          details: "Unable to connect to the database. Please check your DATABASE_URL and ensure the database server is running.",
+          message: process.env.NODE_ENV === "development" ? errorMessage : undefined
+        },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
-      { error: "Failed to create walk-in" },
+      { 
+        error: "Failed to create walk-in",
+        details: process.env.NODE_ENV === "development" ? errorMessage : "An error occurred while creating the walk-in",
+        message: process.env.NODE_ENV === "development" ? errorMessage : undefined
+      },
       { status: 500 }
     );
   }
