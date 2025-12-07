@@ -5,7 +5,9 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  // directUrl is optional - only needed for Supabase migrations
+  // If not set, Prisma will use DATABASE_URL for migrations
+  // For Supabase: Set DIRECT_URL to direct connection (port 5432) in Vercel
 }
 
 model Category {
