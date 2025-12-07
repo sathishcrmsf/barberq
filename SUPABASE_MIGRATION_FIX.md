@@ -29,18 +29,20 @@ You need **TWO** connection strings from Supabase:
    ```
    postgresql://postgres.xxx:password@db.xxx.supabase.co:5432/postgres
    ```
-   - ✅ Port is **5432**
-   - ✅ Domain is `db.xxx.supabase.co` (NOT pooler)
+   - ✅ **Port: 5432** (this is the direct connection port)
+   - ✅ Domain: `db.xxx.supabase.co` (NOT pooler)
 
 #### Get Pooler Connection (for app):
 1. Scroll to **"Connection pooling"** section
-2. Click **"Session mode"** tab (NOT transaction mode)
+2. You can use either:
+   - **Transaction mode** (default) - for app queries (fast)
+   - **Session mode** - also works for app queries
 3. Copy the connection string (looks like):
    ```
    postgresql://postgres.xxx:password@aws-1-ap-south-1.pooler.supabase.com:6543/postgres
    ```
-   - ✅ Port is **6543**
-   - ✅ Domain is `pooler.supabase.com`
+   - ✅ **Port: 6543** (this is the pooler port - always 6543)
+   - ✅ Domain: `pooler.supabase.com` or `aws-X-region.pooler.supabase.com`
 
 ### Step 2: Add Both to Vercel
 
@@ -50,12 +52,14 @@ You need **TWO** connection strings from Supabase:
 
 #### Add DATABASE_URL (Pooler - for app):
 - **Name**: `DATABASE_URL`
-- **Value**: Your pooler connection string (port 6543)
+- **Value**: Your pooler connection string
+- **Port in URL**: **6543** (pooler always uses port 6543)
 - **Environments**: ✓ Production, ✓ Preview, ✓ Development
 
 #### Add DIRECT_URL (Direct - for migrations):
 - **Name**: `DIRECT_URL`
-- **Value**: Your direct connection string (port 5432)
+- **Value**: Your direct connection string
+- **Port in URL**: **5432** (direct connection always uses port 5432)
 - **Environments**: ✓ Production, ✓ Preview, ✓ Development
 
 4. Click **Save**
@@ -84,24 +88,45 @@ git push origin main
 
 ## Alternative: Use Session Mode Pooler
 
-If you can't get the direct connection, try using **Session mode** pooler instead of Transaction mode:
+If you can't get the direct connection, you can use **Session mode** pooler for migrations:
 
 1. In Supabase → Settings → Database → Connection pooling
-2. Use **"Session mode"** connection string (not Transaction mode)
-3. Session mode supports prepared statements
-4. Use this for both `DATABASE_URL` and `DIRECT_URL`
+2. Click **"Session mode"** tab
+3. Copy that connection string (still port 6543, but session mode)
+4. Use this for `DIRECT_URL` (session mode supports prepared statements)
+5. Keep your existing pooler connection for `DATABASE_URL`
+
+**Note:** Both transaction and session mode use port 6543. The difference is the mode, not the port.
 
 ---
 
 ## Why This Happens
 
-- **Transaction pooling** (port 6543, default): Fast but doesn't support prepared statements
-- **Session pooling** (port 6543, session mode): Supports prepared statements
-- **Direct connection** (port 5432): Full PostgreSQL features, best for migrations
+**Supabase Connection Types:**
 
-Prisma migrations need prepared statements, so they require either:
-- Direct connection (port 5432), OR
-- Session mode pooler (port 6543, session mode)
+1. **Direct Connection** 
+   - Port: **5432**
+   - Domain: `db.xxx.supabase.co`
+   - ✅ Full PostgreSQL features
+   - ✅ Works for migrations (supports prepared statements)
+   - Use for: `DIRECT_URL`
+
+2. **Connection Pooler**
+   - Port: **6543** (always)
+   - Domain: `pooler.supabase.com` or `aws-X-region.pooler.supabase.com`
+   - Has TWO modes:
+     - **Transaction mode** (default): ❌ Doesn't support prepared statements
+     - **Session mode**: ✅ Supports prepared statements
+   - Use for: `DATABASE_URL` (app queries)
+
+**The Problem:**
+- Your current `DATABASE_URL` uses transaction mode pooler (port 6543)
+- Prisma migrations need prepared statements
+- Transaction mode pooler doesn't support prepared statements → Error!
+
+**The Solution:**
+- Use direct connection (port 5432) for `DIRECT_URL` → Migrations work ✅
+- Keep pooler (port 6543) for `DATABASE_URL` → App queries work ✅
 
 ---
 
