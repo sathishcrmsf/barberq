@@ -128,7 +128,7 @@ export async function GET() {
 
     // Calculate staff active (staff currently working on a walk-in)
     const staffActive = staff.filter((s) =>
-      inProgressToday.some((w) => w.staffId === s.id)
+      (inProgressToday as unknown as Array<{ staffId: string | null }>).some((w) => w.staffId === s.id)
     ).length;
 
     // Create a service price map for accurate revenue calculation
@@ -275,7 +275,7 @@ export async function GET() {
     // Insight 5: Staff efficiency
     const staffPerformance = staff
       .map((s) => {
-        const staffCompleted = completedToday.filter((w) => w.staffId === s.id);
+        const staffCompleted = (completedToday as unknown as Array<{ staffId: string | null; startedAt: Date | null; completedAt: Date | null }>).filter((w) => w.staffId === s.id);
         const avgCompletionTime = staffCompleted
           .filter((w: any) => w.startedAt && w.completedAt)
           .reduce((sum: number, w: any) => {
