@@ -29,14 +29,16 @@ export default function ServicesPageNew() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
+  const [editInitialStep, setEditInitialStep] = useState<1 | 2 | 3 | 4 | 5>(1);
 
   const handleCreate = () => {
     setEditingService(null);
     setIsDrawerOpen(true);
   };
 
-  const handleEdit = (service: Service) => {
+  const handleEdit = (service: Service, initialStep: 1 | 2 | 3 | 4 | 5 = 1) => {
     setEditingService(service);
+    setEditInitialStep(initialStep);
     setIsEditDrawerOpen(true);
   };
 
@@ -141,7 +143,8 @@ export default function ServicesPageNew() {
             {/* Service Table */}
             <ServiceTable
               services={services}
-              onEdit={handleEdit}
+              onEdit={(service) => handleEdit(service, 1)}
+              onEditImage={(service) => handleEdit(service, 4)}
               onDuplicate={handleDuplicate}
               onToggleStatus={handleToggleStatus}
               onDelete={handleDelete}
@@ -185,8 +188,10 @@ export default function ServicesPageNew() {
         onClose={() => {
           setIsEditDrawerOpen(false);
           setEditingService(null);
+          setEditInitialStep(1);
         }}
         service={editingService}
+        initialStep={editInitialStep}
         onSuccess={() => {
           // Drawer will auto-refresh via the hook
         }}

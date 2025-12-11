@@ -23,7 +23,8 @@ import {
   Search,
   X,
   ArrowUpDown,
-  Loader2
+  Loader2,
+  Image as ImageIcon
 } from 'lucide-react';
 
 type SortField = 'name' | 'price' | 'duration' | 'createdAt';
@@ -33,6 +34,7 @@ type FilterStatus = 'all' | 'active' | 'inactive';
 interface ServiceTableProps {
   services: Service[];
   onEdit: (service: Service) => void;
+  onEditImage?: (service: Service) => void; // Optional: for clicking image specifically
   onDuplicate: (service: Service) => void;
   onToggleStatus: (id: string, currentStatus: boolean) => void;
   onDelete: (id: string, name: string) => void;
@@ -45,6 +47,7 @@ interface ServiceTableProps {
 export function ServiceTable({
   services,
   onEdit,
+  onEditImage,
   onDuplicate,
   onToggleStatus,
   onDelete,
@@ -281,33 +284,87 @@ export function ServiceTable({
                 <div className="flex flex-col sm:flex-row items-start justify-between gap-4 sm:gap-6">
                   {/* Service Info */}
                   <div className="flex-1 min-w-0 w-full sm:w-auto">
-                    {/* Header Row: Name, Badge, and Toggle */}
+                    {/* Header Row: Image, Name, Badge, and Toggle */}
                     <div className="flex items-start justify-between gap-3 mb-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2.5 mb-2 flex-wrap">
-                          <h3 className="font-semibold text-lg text-gray-900">
-                            {service.name}
-                          </h3>
-                          <span
-                            className={cn(
-                              'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0',
-                              service.isActive 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-gray-100 text-gray-600'
-                            )}
-                          >
-                            {service.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                        </div>
-                        
-                        {/* Category */}
-                        {service.category && (
-                          <div className="mb-2">
-                            <CategoryBadge 
-                              name={service.category.name}
-                            />
+                      <div className="flex-1 min-w-0 flex items-start gap-3">
+                        {/* Service Image Thumbnail */}
+                        {(() => {
+                          const thumbnail = service.thumbnailUrl?.trim();
+                          const image = service.imageUrl?.trim();
+                          const imageUrl = (thumbnail && thumbnail.length > 0) ? thumbnail : (image && image.length > 0) ? image : null;
+                          const hasImage = imageUrl !== null;
+                          
+                          return hasImage ? (
+                            <button
+                              type="button"
+                              onClick={() => (onEditImage || onEdit)(service)}
+                              className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border border-gray-200 relative group cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all p-0"
+                              disabled={serviceLoading}
+                              aria-label={`Edit ${service.name} image`}
+                            >
+                              <img
+                                src={imageUrl}
+                                alt={service.imageAlt || service.name}
+                                className="w-full h-full object-cover block"
+                                loading="lazy"
+                                onError={(e) => {
+                                  // Fallback to placeholder if image fails
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                  const parent = target.parentElement;
+                                  if (parent) {
+                                    const placeholder = parent.querySelector('.image-placeholder') as HTMLElement;
+                                    if (placeholder) {
+                                      placeholder.style.display = 'flex';
+                                    }
+                                  }
+                                }}
+                              />
+                              <div className="image-placeholder absolute inset-0 hidden items-center justify-center bg-gray-100 z-10">
+                                <ImageIcon className="w-6 h-6 text-gray-400" />
+                              </div>
+                              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-black/30 transition-opacity flex items-center justify-center pointer-events-none z-20">
+                                <Edit2 className="w-4 h-4 text-white" />
+                              </div>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => (onEditImage || onEdit)(service)}
+                              className="flex-shrink-0 w-16 h-16 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center hover:bg-gray-200 hover:ring-2 hover:ring-blue-500 transition-all cursor-pointer"
+                              disabled={serviceLoading}
+                              aria-label={`Add image for ${service.name}`}
+                            >
+                              <ImageIcon className="w-6 h-6 text-gray-400" />
+                            </button>
+                          );
+                        })()}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2.5 mb-2 flex-wrap">
+                            <h3 className="font-semibold text-lg text-gray-900">
+                              {service.name}
+                            </h3>
+                            <span
+                              className={cn(
+                                'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0',
+                                service.isActive 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-gray-100 text-gray-600'
+                              )}
+                            >
+                              {service.isActive ? 'Active' : 'Inactive'}
+                            </span>
                           </div>
-                        )}
+                          
+                          {/* Category */}
+                          {service.category && (
+                            <div className="mb-2">
+                              <CategoryBadge 
+                                name={service.category.name}
+                              />
+                            </div>
+                          )}
+                        </div>
                       </div>
                       
                       {/* Toggle Switch - Top Right */}

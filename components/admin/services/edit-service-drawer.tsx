@@ -13,12 +13,14 @@ import { useStaff } from '@/hooks/useStaff';
 import { useServices, ServiceFormData, Service } from '@/hooks/useServices';
 import { Check, ChevronRight, ChevronLeft, Sparkles, Users, Settings, FileCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ImageUpload } from './image-upload';
 
 interface EditServiceDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   service: Service | null;
   onSuccess?: () => void;
+  initialStep?: Step; // Optional: start at a specific step
 }
 
 type Step = 1 | 2 | 3 | 4 | 5;
@@ -31,8 +33,8 @@ const STEPS = [
   { number: 5, title: 'Review', icon: Check },
 ];
 
-export function EditServiceDrawer({ isOpen, onClose, service, onSuccess }: EditServiceDrawerProps) {
-  const [currentStep, setCurrentStep] = useState<Step>(1);
+export function EditServiceDrawer({ isOpen, onClose, service, onSuccess, initialStep = 1 }: EditServiceDrawerProps) {
+  const [currentStep, setCurrentStep] = useState<Step>(initialStep);
   const [formData, setFormData] = useState<ServiceFormData>({
     name: '',
     price: 0,
@@ -40,6 +42,9 @@ export function EditServiceDrawer({ isOpen, onClose, service, onSuccess }: EditS
     description: '',
     categoryId: '',
     staffIds: [],
+    imageUrl: '',
+    thumbnailUrl: '',
+    imageAlt: '',
   });
   const [errors, setErrors] = useState<Partial<Record<keyof ServiceFormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,16 +52,16 @@ export function EditServiceDrawer({ isOpen, onClose, service, onSuccess }: EditS
 
   const { activeCategories, loading: categoriesLoading } = useCategories();
   const { activeStaff, loading: staffLoading } = useStaff();
-  const { updateService, services } = useServices();
+  const { updateService } = useServices();
 
   // Load service data when drawer opens
   useEffect(() => {
     if (isOpen && service) {
       setIsLoadingService(true);
       
-      // Fetch current staff assignments for this service
-      const currentService = services.find(s => s.id === service.id);
-      const currentStaffIds = currentService?.StaffService?.map(ss => ss.Staff.id) || [];
+      // Use service prop directly instead of looking it up in services array
+      // This prevents the loop caused by services array updates
+      const currentStaffIds = service.StaffService?.map(ss => ss.Staff.id) || [];
 
       setFormData({
         name: service.name,
@@ -66,18 +71,21 @@ export function EditServiceDrawer({ isOpen, onClose, service, onSuccess }: EditS
         categoryId: service.categoryId || '',
         staffIds: currentStaffIds,
         isActive: service.isActive,
+        imageUrl: service.imageUrl || '',
+        thumbnailUrl: service.thumbnailUrl || '',
+        imageAlt: service.imageAlt || '',
       });
       
-      setCurrentStep(1);
+      setCurrentStep(initialStep);
       setErrors({});
       setIsLoadingService(false);
     }
-  }, [isOpen, service, services]);
+  }, [isOpen, service?.id, initialStep]); // Include initialStep in dependencies
 
   // Reset form when drawer closes
   useEffect(() => {
     if (!isOpen) {
-      setCurrentStep(1);
+      setCurrentStep(1); // Always reset to step 1 when closing
       setFormData({
         name: '',
         price: 0,
@@ -85,6 +93,9 @@ export function EditServiceDrawer({ isOpen, onClose, service, onSuccess }: EditS
         description: '',
         categoryId: '',
         staffIds: [],
+        imageUrl: '',
+        thumbnailUrl: '',
+        imageAlt: '',
       });
       setErrors({});
     }
@@ -466,19 +477,28 @@ export function EditServiceDrawer({ isOpen, onClose, service, onSuccess }: EditS
             {currentStep === 4 && (
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-lg font-bold mb-2">Additional Settings</h3>
+                  <h3 className="text-lg font-bold mb-2">Service Image</h3>
                   <p className="text-sm text-gray-600 mb-4">
-                    Optional settings to enhance your service listing.
+                    Add or update the image for this service. This helps customers visualize the service.
                   </p>
                 </div>
 
-                <div className="p-6 bg-gray-50 rounded-xl text-center">
-                  <Sparkles className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-600 font-medium mb-2">Coming Soon</p>
-                  <p className="text-sm text-gray-500">
-                    Features like tags, service images, and custom fields will be available in future updates.
-                  </p>
-                </div>
+                <ImageUpload
+                  value={{
+                    imageUrl: formData.imageUrl || null,
+                    thumbnailUrl: formData.thumbnailUrl || null,
+                    imageAlt: formData.imageAlt || null,
+                  }}
+                  onChange={(imageData) => {
+                    setFormData({
+                      ...formData,
+                      imageUrl: imageData.imageUrl || '',
+                      thumbnailUrl: imageData.thumbnailUrl || '',
+                      imageAlt: imageData.imageAlt || '',
+                    });
+                  }}
+                  label="Service Image"
+                />
               </div>
             )}
 
@@ -519,6 +539,18 @@ export function EditServiceDrawer({ isOpen, onClose, service, onSuccess }: EditS
                         <div>
                           <p className="text-sm text-gray-600">Description</p>
                           <p className="text-sm">{formData.description}</p>
+                        </div>
+                      )}
+                      {formData.imageUrl && (
+                        <div>
+                          <p className="text-sm text-gray-600 mb-2">Image</p>
+                          <div className="w-full h-32 rounded-lg overflow-hidden bg-gray-100">
+                            <img
+                              src={formData.imageUrl}
+                              alt={formData.imageAlt || 'Service image'}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
                         </div>
                       )}
                     </div>
