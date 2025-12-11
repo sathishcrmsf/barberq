@@ -249,7 +249,7 @@ export async function GET() {
     }
 
     // Insight 4: Top service today
-    const serviceCounts = (todayWalkIns as Array<{ service: string }>).reduce(
+    const serviceCounts = (todayWalkIns as unknown as Array<{ service: string }>).reduce(
       (acc: Record<string, number>, w) => {
         const service = String(w.service || '');
         acc[service] = (acc[service] || 0) + 1;
