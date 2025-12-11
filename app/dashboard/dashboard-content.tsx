@@ -315,7 +315,6 @@ export async function DashboardContent() {
         totalProducts: 0,
         lowStockCount: 0,
         inventoryValue: 0,
-        revenueToday: 0,
       },
       insights: [],
       queueStatus: {
