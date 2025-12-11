@@ -1,7 +1,8 @@
 // @cursor: Server component that fetches dashboard data
 // This renders on the server for better performance
+// @cursor v1.5: Optimized to prevent connection pool exhaustion
 
-import { prisma } from "@/lib/prisma";
+import { prisma, executeWithRetry } from "@/lib/prisma";
 import { DashboardClient } from "./dashboard-client";
 
 async function fetchDashboardData() {
@@ -10,65 +11,160 @@ async function fetchDashboardData() {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    // Fetch only essential data in parallel - optimized for speed
-    // Skip historical data - only fetch what's needed for dashboard
-    const [completedToday, inProgressToday, waitingWalkIns, services, staff] = await Promise.all([
-    // Get completed today
-    prisma.walkIn.findMany({
-      where: {
-        status: "done",
-        createdAt: { gte: todayStart },
-      },
-      select: {
-        id: true,
-        service: true,
-        staffId: true,
-        startedAt: true,
-        completedAt: true,
-      },
-    }),
-    // Get in-progress
-    prisma.walkIn.findMany({
-      where: {
-        status: "in-progress",
-      },
-      select: {
-        id: true,
-        staffId: true,
-        customerName: true,
-        service: true,
-      },
-      orderBy: { startedAt: "asc" },
-    }),
-    // Get waiting
-    prisma.walkIn.findMany({
-      where: {
-        status: "waiting",
-      },
-      select: {
-        id: true,
-        createdAt: true,
-        customerName: true,
-        service: true,
-      },
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.service.findMany({
-      where: { isActive: true },
-      select: {
-        id: true,
-        name: true,
-        price: true,
-      },
-    }),
-    prisma.staff.findMany({
-      where: { isActive: true },
-      select: {
-        id: true,
-        name: true,
-      },
-    }),
-  ]);
+    // Optimize: Reduce parallel queries to prevent connection pool exhaustion
+    // Strategy: Fetch all walk-ins in one query, then filter in memory
+    // This reduces from 5 parallel queries to 4 (walkIns, services, staff, products)
+    // If parallel execution fails, fall back to sequential execution
+    let allWalkIns, services, staff, products;
+    
+    try {
+      // Try parallel execution first (faster)
+      [allWalkIns, services, staff, products] = await Promise.all([
+        // Fetch all walk-ins we need in a single query
+        executeWithRetry(() =>
+          prisma.walkIn.findMany({
+            where: {
+              OR: [
+                { status: "waiting" },
+                { status: "in-progress" },
+                { status: "done", createdAt: { gte: todayStart } },
+              ],
+            },
+            select: {
+              id: true,
+              status: true,
+              service: true,
+              staffId: true,
+              customerName: true,
+              createdAt: true,
+              startedAt: true,
+              completedAt: true,
+            },
+            orderBy: [
+              { status: "asc" },
+              { createdAt: "asc" },
+            ],
+          })
+        ),
+        // Services query
+        executeWithRetry(() =>
+          prisma.service.findMany({
+            where: { isActive: true },
+            select: {
+              id: true,
+              name: true,
+              price: true,
+            },
+          })
+        ),
+        // Staff query
+        executeWithRetry(() =>
+          prisma.staff.findMany({
+            where: { isActive: true },
+            select: {
+              id: true,
+              name: true,
+            },
+          })
+        ),
+        // Products query
+        executeWithRetry(() =>
+          prisma.product.findMany({
+            where: { isActive: true },
+            select: {
+              id: true,
+              name: true,
+              stockQuantity: true,
+              lowStockThreshold: true,
+              price: true,
+              cost: true,
+            },
+          })
+        ),
+      ]);
+    } catch (parallelError) {
+      // Fallback to sequential execution if parallel fails
+      console.warn("Parallel queries failed, falling back to sequential execution:", parallelError);
+      allWalkIns = await executeWithRetry(() =>
+        prisma.walkIn.findMany({
+          where: {
+            OR: [
+              { status: "waiting" },
+              { status: "in-progress" },
+              { status: "done", createdAt: { gte: todayStart } },
+            ],
+          },
+          select: {
+            id: true,
+            status: true,
+            service: true,
+            staffId: true,
+            customerName: true,
+            createdAt: true,
+            startedAt: true,
+            completedAt: true,
+          },
+          orderBy: [
+            { status: "asc" },
+            { createdAt: "asc" },
+          ],
+        })
+      );
+      services = await executeWithRetry(() =>
+        prisma.service.findMany({
+          where: { isActive: true },
+          select: {
+            id: true,
+            name: true,
+            price: true,
+          },
+        })
+      );
+      staff = await executeWithRetry(() =>
+        prisma.staff.findMany({
+          where: { isActive: true },
+          select: {
+            id: true,
+            name: true,
+          },
+        })
+      );
+      
+      // Get products data (for dashboard stats)
+      try {
+        products = await executeWithRetry(() =>
+          prisma.product.findMany({
+            where: { isActive: true },
+            select: {
+              id: true,
+              name: true,
+              stockQuantity: true,
+              lowStockThreshold: true,
+              price: true,
+              cost: true,
+            },
+          })
+        );
+      } catch (error) {
+        // If products table doesn't exist yet, use empty array
+        console.warn("Products table may not exist:", error);
+        products = [];
+      }
+    }
+
+    // Filter walk-ins in memory (much faster than multiple DB queries)
+    const completedToday = allWalkIns.filter(
+      (w) => w.status === "done" && w.createdAt >= todayStart
+    );
+    const inProgressToday = allWalkIns
+      .filter((w) => w.status === "in-progress")
+      .sort((a, b) => {
+        if (!a.startedAt || !b.startedAt) return 0;
+        return a.startedAt.getTime() - b.startedAt.getTime();
+      });
+    const waitingWalkIns = allWalkIns
+      .filter((w) => w.status === "waiting")
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 
   // Calculate metrics
   const avgWaitTime =
@@ -128,17 +224,25 @@ async function fetchDashboardData() {
     });
   }
 
-  // Skip smart insights for initial load - they're non-critical and slow
-  // Can be loaded client-side after initial render if needed
-  const smartInsights: Array<{
-    id: string;
-    emoji: string;
-    title: string;
-    value: string;
-    priority: number;
-  }> = [];
+  // Product insights
+  if (products && products.length > 0) {
+    const lowStockProducts = products.filter(
+      (p) => p.stockQuantity <= p.lowStockThreshold
+    );
+    if (lowStockProducts.length > 0) {
+      insights.push({
+        id: "low-stock",
+        emoji: "📦",
+        title: "Low Stock Alert",
+        value: `${lowStockProducts.length} product${lowStockProducts.length > 1 ? 's' : ''} need restocking`,
+        priority: 2,
+      });
+    }
+  }
 
-  const allInsights = [...insights, ...smartInsights]
+  // Use only real-time insights (smart insights disabled for performance)
+  // See PERFORMANCE_NOTES.md for details
+  const allInsights = insights
     .sort((a, b) => a.priority - b.priority)
     .slice(0, 5);
 
@@ -163,6 +267,16 @@ async function fetchDashboardData() {
     queueCount: waitingWalkIns.length,
   };
 
+  // Calculate product statistics
+  const totalProducts = products?.length || 0;
+  const lowStockCount = products?.filter(
+    (p) => p.stockQuantity <= p.lowStockThreshold
+  ).length || 0;
+  const inventoryValue = products?.reduce((sum, p) => {
+    const unitValue = p.cost ?? p.price;
+    return sum + p.stockQuantity * unitValue;
+  }, 0) || 0;
+
   return {
     kpis: {
       queueCount: waitingWalkIns.length,
@@ -170,6 +284,9 @@ async function fetchDashboardData() {
       staffActive,
       inProgressToday: inProgressToday.length,
       revenueToday: Math.round(revenueToday),
+      totalProducts,
+      lowStockCount,
+      inventoryValue: Math.round(inventoryValue),
     },
     insights: allInsights,
     queueStatus,
@@ -194,6 +311,10 @@ export async function DashboardContent() {
         avgWaitTime: 0,
         staffActive: 0,
         inProgressToday: 0,
+        revenueToday: 0,
+        totalProducts: 0,
+        lowStockCount: 0,
+        inventoryValue: 0,
         revenueToday: 0,
       },
       insights: [],

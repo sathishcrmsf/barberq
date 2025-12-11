@@ -5,13 +5,11 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  // directUrl is optional - only needed for Supabase migrations
-  // If not set, Prisma will use DATABASE_URL for migrations
-  // For Supabase: Set DIRECT_URL to direct connection (port 5432) in Vercel
+  directUrl = env("DIRECT_URL")
 }
 
 model Category {
-  id           String    @id
+  id           String    @id @default(cuid())
   name         String    @unique
   description  String?
   icon         String?
@@ -33,7 +31,7 @@ model Customer {
 }
 
 model Service {
-  id           String         @id
+  id           String         @id @default(cuid())
   name         String         @unique
   price        Float
   duration     Int
@@ -50,7 +48,7 @@ model Service {
 }
 
 model Staff {
-  id           String         @id
+  id           String         @id @default(cuid())
   name         String
   title        String?
   email        String?
@@ -66,7 +64,7 @@ model Staff {
 }
 
 model StaffService {
-  id              String   @id
+  id              String   @id @default(cuid())
   staffId         String
   serviceId       String
   isPrimary       Boolean  @default(false)
@@ -79,23 +77,62 @@ model StaffService {
 }
 
 model WalkIn {
-  id           String    @id
+  id           String       @id @default(cuid())
   customerName String?
   service      String
-  status       String    @default("waiting")
+  status       String       @default("waiting")
   notes        String?
-  createdAt    DateTime  @default(now())
+  createdAt    DateTime     @default(now())
   barberName   String?
   startedAt    DateTime?
   customerId   String?
   completedAt  DateTime?
   staffId      String?
-  Customer     Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  Staff        Staff?    @relation(fields: [staffId], references: [id])
+  Customer     Customer?    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  Staff        Staff?       @relation(fields: [staffId], references: [id])
+  ProductSales ProductSale[]
 
   @@index([createdAt])
   @@index([customerId])
   @@index([staffId])
   @@index([status, createdAt])
   @@index([status])
+}
+
+model Product {
+  id                String       @id @default(cuid())
+  name              String
+  description       String?
+  sku               String?       @unique
+  price             Float
+  cost              Float?       // Cost per unit (for profit calculation)
+  stockQuantity     Int          @default(0)
+  lowStockThreshold Int          @default(5) // Alert when stock falls below this
+  unit              String       @default("unit") // e.g., "bottle", "box", "unit"
+  imageUrl          String?
+  thumbnailUrl      String?
+  isActive          Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  ProductSales      ProductSale[]
+
+  @@index([isActive])
+  @@index([stockQuantity])
+}
+
+model ProductSale {
+  id          String   @id @default(cuid())
+  productId   String
+  walkInId    String?  // Optional - can track standalone product sales
+  quantity    Int      @default(1)
+  unitPrice   Float    // Price at time of sale (for historical accuracy)
+  totalPrice  Float    // quantity * unitPrice
+  soldAt      DateTime @default(now())
+  notes       String?
+  Product     Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  WalkIn      WalkIn?  @relation(fields: [walkInId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([walkInId])
+  @@index([soldAt])
 }

@@ -14,13 +14,11 @@ import {
   Scissors,
   Tags,
   UsersIcon,
-  ChevronRight,
   Activity,
   Phone,
-  Brain,
+  Package,
 } from "lucide-react";
 import { MiniStatCard } from "@/components/ui/mini-stat-card";
-import { PremiumActionCard } from "@/components/ui/premium-action-card";
 import { SideDrawer } from "@/components/ui/side-drawer";
 import { MenuButton } from "./menu-button";
 
@@ -31,6 +29,9 @@ interface DashboardData {
     staffActive: number;
     inProgressToday: number;
     revenueToday: number;
+    totalProducts?: number;
+    lowStockCount?: number;
+    inventoryValue?: number;
   };
   insights: Array<{
     id: string;
@@ -119,109 +120,114 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
           </div>
         </section>
 
-        {/* ===== SECTION 3: MAIN ACTIONS (PRIMARY BUTTONS) ===== */}
+        {/* ===== SECTION 3: MAIN ACTIONS (PRIMARY BUTTONS - GRID VIEW) ===== */}
         <section>
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 px-1">
             Main Actions
           </h2>
-          <div className="space-y-3">
-            {/* Queue - Full Width */}
-            <PremiumActionCard
-              title="Queue"
-              icon={Eye}
+          <div className="grid grid-cols-2 gap-3">
+            <Link
               href="/queue"
-              gradient="from-gray-900 to-gray-700"
-              queueCount={data.kpis.queueCount}
-            />
+              className="group flex flex-col items-center justify-center p-5 bg-gradient-to-br from-gray-900 to-gray-700 rounded-xl border border-gray-800 hover:shadow-lg active:scale-[0.98] transition-all relative overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-white/0 group-hover:bg-white/5 transition-colors pointer-events-none" />
+              <div className="relative z-10 p-3 bg-white/20 backdrop-blur-sm rounded-xl mb-3 group-hover:scale-110 transition-transform">
+                <Eye className="w-7 h-7 text-white" />
+              </div>
+              <span className="relative z-10 font-bold text-base text-white text-center">
+                Queue
+              </span>
+              {data.kpis.queueCount > 0 && (
+                <span className="relative z-10 text-xs text-white/80 mt-1">
+                  ({data.kpis.queueCount})
+                </span>
+              )}
+            </Link>
 
-            {/* Add Walk-in, Analytics & Insights - Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <PremiumActionCard
-                title="Add Walk-In"
-                icon={UserPlus}
-                href="/add"
-                gradient="from-blue-600 to-blue-500"
-              />
-              <PremiumActionCard
-                title="Analytics"
-                icon={BarChart3}
-                href="/analytics"
-                gradient="from-indigo-600 to-indigo-500"
-              />
-              <PremiumActionCard
-                title="Smart Insights"
-                icon={Brain}
-                href="/insights"
-                gradient="from-purple-600 to-purple-500"
-              />
-            </div>
+            <Link
+              href="/add"
+              className="group flex flex-col items-center justify-center p-5 bg-gradient-to-br from-blue-600 to-blue-500 rounded-xl border border-blue-700 hover:shadow-lg active:scale-[0.98] transition-all relative overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-white/0 group-hover:bg-white/5 transition-colors pointer-events-none" />
+              <div className="relative z-10 p-3 bg-white/20 backdrop-blur-sm rounded-xl mb-3 group-hover:scale-110 transition-transform">
+                <UserPlus className="w-7 h-7 text-white" />
+              </div>
+              <span className="relative z-10 font-bold text-base text-white text-center">
+                Add Walk-In
+              </span>
+            </Link>
           </div>
         </section>
 
-        {/* ===== SECTION 4: MANAGE SHOP (SECONDARY ITEMS) ===== */}
+        {/* ===== SECTION 4: MANAGE SHOP (SECONDARY ITEMS - GRID VIEW) ===== */}
         <section>
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 px-1">
             Manage Shop
           </h2>
-          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+          <div className="grid grid-cols-2 gap-3">
             <Link
               href="/services"
-              className="flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-200"
+              className="group flex flex-col items-center justify-center p-4 bg-white rounded-xl border border-gray-200 hover:border-orange-300 hover:shadow-md active:scale-[0.98] transition-all"
             >
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="p-2.5 bg-gradient-to-br from-orange-500 to-orange-400 rounded-lg flex-shrink-0">
-                  <Scissors className="w-5 h-5 text-white" />
-                </div>
-                <span className="font-semibold text-base text-gray-900">
-                  Services
-                </span>
+              <div className="p-3 bg-gradient-to-br from-orange-500 to-orange-400 rounded-xl mb-2.5 group-hover:scale-110 transition-transform">
+                <Scissors className="w-6 h-6 text-white" />
               </div>
-              <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+              <span className="font-semibold text-sm text-gray-900 text-center">
+                Services
+              </span>
             </Link>
 
             <Link
               href="/categories"
-              className="flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-200"
+              className="group flex flex-col items-center justify-center p-4 bg-white rounded-xl border border-gray-200 hover:border-purple-300 hover:shadow-md active:scale-[0.98] transition-all"
             >
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="p-2.5 bg-gradient-to-br from-purple-500 to-purple-400 rounded-lg flex-shrink-0">
-                  <Tags className="w-5 h-5 text-white" />
-                </div>
-                <span className="font-semibold text-base text-gray-900">
-                  Categories
-                </span>
+              <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-400 rounded-xl mb-2.5 group-hover:scale-110 transition-transform">
+                <Tags className="w-6 h-6 text-white" />
               </div>
-              <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+              <span className="font-semibold text-sm text-gray-900 text-center">
+                Categories
+              </span>
             </Link>
 
             <Link
               href="/staff"
-              className="flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-200"
+              className="group flex flex-col items-center justify-center p-4 bg-white rounded-xl border border-gray-200 hover:border-green-300 hover:shadow-md active:scale-[0.98] transition-all"
             >
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="p-2.5 bg-gradient-to-br from-green-500 to-green-400 rounded-lg flex-shrink-0">
-                  <UsersIcon className="w-5 h-5 text-white" />
-                </div>
-                <span className="font-semibold text-base text-gray-900">
-                  Staff
-                </span>
+              <div className="p-3 bg-gradient-to-br from-green-500 to-green-400 rounded-xl mb-2.5 group-hover:scale-110 transition-transform">
+                <UsersIcon className="w-6 h-6 text-white" />
               </div>
-              <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+              <span className="font-semibold text-sm text-gray-900 text-center">
+                Staff
+              </span>
             </Link>
 
             <Link
               href="/customers"
-              className="flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              className="group flex flex-col items-center justify-center p-4 bg-white rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md active:scale-[0.98] transition-all"
             >
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="p-2.5 bg-gradient-to-br from-blue-500 to-blue-400 rounded-lg flex-shrink-0">
-                  <Phone className="w-5 h-5 text-white" />
-                </div>
-                <span className="font-semibold text-base text-gray-900">
-                  Customers
-                </span>
+              <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-400 rounded-xl mb-2.5 group-hover:scale-110 transition-transform">
+                <Phone className="w-6 h-6 text-white" />
               </div>
-              <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+              <span className="font-semibold text-sm text-gray-900 text-center">
+                Customers
+              </span>
+            </Link>
+
+            <Link
+              href="/products"
+              className="group flex flex-col items-center justify-center p-4 bg-white rounded-xl border border-gray-200 hover:border-indigo-300 hover:shadow-md active:scale-[0.98] transition-all"
+            >
+              <div className="p-3 bg-gradient-to-br from-indigo-500 to-indigo-400 rounded-xl mb-2.5 group-hover:scale-110 transition-transform">
+                <Package className="w-6 h-6 text-white" />
+              </div>
+              <span className="font-semibold text-sm text-gray-900 text-center">
+                Products
+              </span>
+              {data.kpis.lowStockCount && data.kpis.lowStockCount > 0 && (
+                <span className="text-xs text-orange-600 font-medium mt-1">
+                  {data.kpis.lowStockCount} low stock
+                </span>
+              )}
             </Link>
           </div>
         </section>

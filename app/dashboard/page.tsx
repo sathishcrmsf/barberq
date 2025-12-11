@@ -8,6 +8,9 @@ import { DashboardContent } from "./dashboard-content";
 import { DashboardSkeleton } from "./dashboard-skeleton";
 import { DashboardHeader } from "./dashboard-header";
 
+// Revalidate every 3 seconds for fresh dashboard data
+export const revalidate = 3;
+
 export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">

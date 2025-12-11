@@ -1,10 +1,9 @@
 // @cursor: Dashboard API endpoint that aggregates all dashboard data in one request
 // Returns KPIs, insights, and queue status for performance optimization
-// Enhanced with smart insights system
+// Real-time insights only (smart insights disabled for performance)
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getTopInsights } from "@/lib/insights";
 
 export async function GET() {
   try {
@@ -18,7 +17,7 @@ export async function GET() {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     sevenDaysAgo.setHours(0, 0, 0, 0);
 
-    const [recentWalkIns, todayWalkIns, completedToday, inProgressToday, waitingWalkIns, services, staff] = await Promise.all([
+    const [recentWalkIns, todayWalkIns, completedToday, inProgressToday, waitingWalkIns, services, staff, products] = await Promise.all([
       // Get recent walk-ins for insights (last 7 days only - much faster)
       prisma.walkIn.findMany({
         where: {
@@ -29,10 +28,9 @@ export async function GET() {
           status: true,
           createdAt: true,
           startedAt: true,
-          completedAt: true,
           service: true,
           staffId: true,
-        },
+        } as any,
         orderBy: { createdAt: "asc" },
       }),
       // Get today's walk-ins only
@@ -45,10 +43,9 @@ export async function GET() {
           status: true,
           createdAt: true,
           startedAt: true,
-          completedAt: true,
           service: true,
           staffId: true,
-        },
+        } as any,
       }),
       // Get completed today
       prisma.walkIn.findMany({
@@ -62,7 +59,7 @@ export async function GET() {
           staffId: true,
           startedAt: true,
           completedAt: true,
-        },
+        } as any,
       }),
       // Get in-progress
       prisma.walkIn.findMany({
@@ -105,6 +102,17 @@ export async function GET() {
           name: true,
         },
       }),
+      prisma.product.findMany({
+        where: { isActive: true },
+        select: {
+          id: true,
+          name: true,
+          stockQuantity: true,
+          lowStockThreshold: true,
+          price: true,
+          cost: true,
+        },
+      }),
     ]);
 
     // Calculate average wait time
@@ -126,13 +134,13 @@ export async function GET() {
     // Create a service price map for accurate revenue calculation
     // Use both exact match and case-insensitive match for robustness
     const servicePriceMap = new Map(services.map(s => [s.name, s.price]));
-    const servicePriceMapLower = new Map(services.map(s => [s.name.toLowerCase().trim(), s.price]));
+    const servicePriceMapLower = new Map(services.map((s: any) => [s.name.toLowerCase().trim(), s.price]));
     
     // Calculate total revenue today from all completed walk-ins
-    const revenueToday = completedToday.reduce((sum, w) => {
+    const revenueToday = completedToday.reduce((sum, w: any) => {
       // Try exact match first, then case-insensitive match
       const price = servicePriceMap.get(w.service) || 
-                    servicePriceMapLower.get(w.service.toLowerCase().trim()) || 
+                    servicePriceMapLower.get((w.service || '').toLowerCase().trim()) || 
                     0;
       return sum + price;
     }, 0);
@@ -160,8 +168,8 @@ export async function GET() {
     // Insight 2: Peak hour prediction (using recent data)
     const currentHour = new Date().getHours();
     const hourlyBookings = recentWalkIns.reduce(
-      (acc, w) => {
-        const hour = w.createdAt.getHours();
+      (acc, w: any) => {
+        const hour = w.createdAt?.getHours() || 0;
         acc[hour] = (acc[hour] || 0) + 1;
         return acc;
       },
@@ -205,16 +213,16 @@ export async function GET() {
     // Get yesterday's revenue from recent walk-ins (more efficient)
     const yesterdayRevenue = recentWalkIns
       .filter(
-        (w) =>
+        (w: any) =>
           w.status === "done" &&
           w.completedAt &&
           w.completedAt >= yesterdayStart &&
           w.completedAt <= yesterdayEnd
       )
-      .reduce((sum, w) => {
+      .reduce((sum: number, w: any) => {
         // Try exact match first, then case-insensitive match
         const price = servicePriceMap.get(w.service) || 
-                      servicePriceMapLower.get(w.service.toLowerCase().trim()) || 
+                      servicePriceMapLower.get((w.service || '').toLowerCase().trim()) || 
                       0;
         return sum + price;
       }, 0);
@@ -268,8 +276,8 @@ export async function GET() {
       .map((s) => {
         const staffCompleted = completedToday.filter((w) => w.staffId === s.id);
         const avgCompletionTime = staffCompleted
-          .filter((w) => w.startedAt && w.completedAt)
-          .reduce((sum, w) => {
+          .filter((w: any) => w.startedAt && w.completedAt)
+          .reduce((sum: number, w: any) => {
             if (w.startedAt && w.completedAt) {
               const duration = (w.completedAt.getTime() - w.startedAt.getTime()) / 60000;
               return sum + duration;
@@ -332,42 +340,26 @@ export async function GET() {
       }
     }
 
+    // Insight 8: Low stock alert
+    const lowStockProducts = products.filter(
+      (p) => p.stockQuantity <= p.lowStockThreshold
+    );
+    if (lowStockProducts.length > 0) {
+      insights.push({
+        id: "low-stock",
+        emoji: "📦",
+        title: "Low Stock Alert",
+        value: `${lowStockProducts.length} product${lowStockProducts.length > 1 ? 's' : ''} need restocking`,
+        priority: 2,
+      });
+    }
+
     // Sort by priority and take top 3
     const sortedInsights = insights.sort((a, b) => a.priority - b.priority).slice(0, 3);
 
-    // Get smart insights from the insights system (with timeout to prevent blocking)
-    let smartInsights: Array<{
-      id: string;
-      emoji: string;
-      title: string;
-      value: string;
-      priority: number;
-    }> = [];
-
-    try {
-      // Use Promise.race to timeout after 1 second - don't block dashboard load
-      const insightsPromise = getTopInsights(5);
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Timeout")), 1000)
-      );
-      
-      const topSmartInsights = await Promise.race([insightsPromise, timeoutPromise]);
-      smartInsights = topSmartInsights.map((insight) => ({
-        id: insight.id,
-        emoji: insight.emoji,
-        title: insight.title,
-        value: insight.value.toString(),
-        priority: insight.priority,
-      }));
-    } catch (error) {
-      // Silently fail - dashboard should still load without smart insights
-      // This prevents slow insights from blocking the entire dashboard
-    }
-
-    // Merge insights: prioritize existing real-time insights, then add smart insights
-    const allInsights = [...sortedInsights, ...smartInsights]
-      .sort((a, b) => a.priority - b.priority)
-      .slice(0, 5); // Top 5 total
+    // Use only real-time insights (smart insights disabled for performance)
+    // See PERFORMANCE_NOTES.md for details on re-enabling smart insights
+    const allInsights = sortedInsights;
 
     // Queue status
     const inProgressWalkIn = inProgressToday[0];
@@ -390,6 +382,16 @@ export async function GET() {
       queueCount: waitingWalkIns.length,
     };
 
+    // Calculate product statistics
+    const totalProducts = products.length;
+    const lowStockCount = products.filter(
+      (p) => p.stockQuantity <= p.lowStockThreshold
+    ).length;
+    const inventoryValue = products.reduce((sum, p) => {
+      const unitValue = p.cost ?? p.price;
+      return sum + p.stockQuantity * unitValue;
+    }, 0);
+
     // Return all dashboard data
     return NextResponse.json(
       {
@@ -399,11 +401,19 @@ export async function GET() {
           staffActive,
           inProgressToday: inProgressToday.length,
           revenueToday: Math.round(revenueToday),
+          totalProducts,
+          lowStockCount,
+          inventoryValue: Math.round(inventoryValue),
         },
         insights: allInsights,
         queueStatus,
       },
-      { status: 200 }
+      { 
+        status: 200,
+        headers: {
+          'Cache-Control': 'public, s-maxage=3, stale-while-revalidate=10',
+        }
+      }
     );
   } catch (error) {
     console.error("Error fetching dashboard data:", error);
