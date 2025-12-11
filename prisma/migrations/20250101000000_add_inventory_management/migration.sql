@@ -50,8 +50,30 @@ CREATE INDEX IF NOT EXISTS "ProductSale_walkInId_idx" ON "ProductSale"("walkInId
 -- CreateIndex
 CREATE INDEX IF NOT EXISTS "ProductSale_soldAt_idx" ON "ProductSale"("soldAt");
 
--- AddForeignKey
-ALTER TABLE "ProductSale" ADD CONSTRAINT IF NOT EXISTS "ProductSale_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+-- AddForeignKey (with existence check)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'ProductSale_productId_fkey'
+    ) THEN
+        ALTER TABLE "ProductSale" 
+        ADD CONSTRAINT "ProductSale_productId_fkey" 
+        FOREIGN KEY ("productId") REFERENCES "Product"("id") 
+        ON DELETE RESTRICT ON UPDATE CASCADE;
+    END IF;
+END $$;
 
--- AddForeignKey
-ALTER TABLE "ProductSale" ADD CONSTRAINT IF NOT EXISTS "ProductSale_walkInId_fkey" FOREIGN KEY ("walkInId") REFERENCES "WalkIn"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+-- AddForeignKey (with existence check)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'ProductSale_walkInId_fkey'
+    ) THEN
+        ALTER TABLE "ProductSale" 
+        ADD CONSTRAINT "ProductSale_walkInId_fkey" 
+        FOREIGN KEY ("walkInId") REFERENCES "WalkIn"("id") 
+        ON DELETE SET NULL ON UPDATE CASCADE;
+    END IF;
+END $$;
