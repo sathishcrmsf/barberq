@@ -217,7 +217,7 @@ export function ImageUpload({ value, onChange, label = 'Service Image', error }:
               disabled={isUploading}
             >
               <img
-                src={value.imageUrl}
+                src={value.imageUrl ?? ''}
                 alt={value.imageAlt || 'Service image'}
                 className="w-full h-full object-cover block"
                 onError={(e) => {
