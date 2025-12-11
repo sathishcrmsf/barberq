@@ -15,7 +15,7 @@ async function fetchDashboardData() {
     // Strategy: Fetch all walk-ins in one query, then filter in memory
     // This reduces from 5 parallel queries to 4 (walkIns, services, staff, products)
     // If parallel execution fails, fall back to sequential execution
-    let allWalkIns, services, staff, products;
+    let allWalkIns: any[], services: any[], staff: any[], products: any[];
     
     try {
       // Try parallel execution first (faster)
